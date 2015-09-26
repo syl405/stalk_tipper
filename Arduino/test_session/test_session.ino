@@ -38,7 +38,6 @@ void setup() {
     if (Serial.available() > 0) { //if data is available in the serial buffer
       stringReceived += char(Serial.read()); //read next byte from buffer and append to string
     }
-    Serial.println(stringReceived);
     if (stringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
       rasPiReady = true;
       Serial.println("READY"); //return "READY" signal to RasPi
