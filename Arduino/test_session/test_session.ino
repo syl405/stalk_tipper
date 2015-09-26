@@ -45,10 +45,7 @@ void setup() {
   }
 }
 
-void loop() {
-  loadCellVal = ads1115.readADC_Differential_0_1(); //differential signal between channels 0 and 1
-  potVal = ads1115.readADC_Differential_2_3(); //differential signal between channels 2 and 3
-  
+void loop() { 
   //===============================
   //READ BUTTON AND START STOP TEST
   //***to-do: introduce debounce here to ignore noise from button presses (potential problem with test stopping prematurely when loop delay reduced)
@@ -74,10 +71,12 @@ void loop() {
     lastTestStartStopButtonState = testStartStopButtonState; //save current button state as last button state for next iteration
   }
   
-  //==============================================
-  //SEND DATA TO SERIAL OUTPUT WHILE TEST UNDERWAY
-  //==============================================
+  //================================================================
+  // READ SENSORS AND SEND DATA TO SERIAL OUTPUT WHILE TEST UNDERWAY
+  //================================================================
   if (testUnderway == true) {
+    loadCellVal = ads1115.readADC_Differential_0_1(); //differential signal between channels 0 and 1
+    potVal = ads1115.readADC_Differential_2_3(); //differential signal between channels 2 and 3
     sendData();
   }
   
