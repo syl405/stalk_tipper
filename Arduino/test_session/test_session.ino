@@ -57,6 +57,7 @@ void loop() {
       if (testUnderway == false) { //if no test was underway
         testUnderway = true; //start test
         testStatusLedState = HIGH; //turn on test status LED
+        digitalWrite(readyLedPin, LOW); //turn off READY status LED
         testId ++; //increment testId
         Serial.print("BEGIN TESTID="); //keyword to start test
         Serial.println(testId); //unique test identifier
@@ -66,6 +67,8 @@ void loop() {
         testStatusLedState = LOW; //turn off test status LED
         Serial.print("END TESTID=");
         Serial.println(testId);
+        
+        digitalWrite(readyLedPin, HIGH); //turn on READY status LED
       }
     }
     lastTestStartStopButtonState = testStartStopButtonState; //save current button state as last button state for next iteration
