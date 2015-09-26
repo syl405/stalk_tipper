@@ -35,13 +35,17 @@ void setup() {
   
   while (rasPiReady == false) {
     Serial.println("WAITING");
-    stringReceived += Serial.read(); //read next byte from buffer and append to string
+    if (Serial.available() > 0) { //if data is available in the serial buffer
+      stringReceived += char(Serial.read()); //read next byte from buffer and append to string
+    }
+    Serial.println(stringReceived);
     if (stringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
       rasPiReady = true;
       Serial.println("READY"); //return "READY" signal to RasPi
       digitalWrite(readyLedPin, HIGH); //turn on READY status LED
     }
     //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer
+    delay(50);  
   }
 }
 
