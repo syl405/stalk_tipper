@@ -4,6 +4,7 @@
 Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
 
 //constants to set pin numbers
+const int readyLedPin = 4;
 const int testStatusLedPin = 3;
 const int testStartStopButtonPin = 2;
 
@@ -18,11 +19,30 @@ int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
 unsigned int testId = 0;
 
+
 void setup() {
   Serial.begin(115200);
   ads1115.begin(); //initialise ADS object
+  pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
   pinMode(testStartStopButtonPin, INPUT);
+  
+  //============================================================================
+  //SEND "WAITING" SIGNAL REPEATEDLY WHILE LISTENING FOR READY SIGNAL FROM RASPI
+  //============================================================================
+  String stringReceived; //line received from RasPi
+  boolean rasPiReady = false;
+  
+  while (rasPiReady == false) {
+    Serial.println("WAITING");
+    stringReceived += Serial.read(); //read next byte from buffer and append to string
+    if (stringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
+      rasPiReady = true;
+      Serial.println("READY"); //return "READY" signal to RasPi
+      digitalWrite(readyLedPin, HIGH); //turn on READY status LED
+    }
+    //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer
+  }
 }
 
 void loop() {
