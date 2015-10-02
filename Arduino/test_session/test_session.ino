@@ -98,7 +98,11 @@ void waitForRasPi() {
   long int waitStartTime = millis(); //save starting time of the loop
   
   while (rasPiReady == false) {
-    Serial.println("WAITING");
+    long int curTime = millis(); //time at the start of this loop iteration
+    if (curTime - waitStartTime > 500) {
+      Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
+      waitStartTime = curTime; //reset timer
+    }
     if (Serial.available() > 0) { //if data is available in the serial buffer
       stringReceived += char(Serial.read()); //read next byte from buffer and append to string
     }
@@ -107,8 +111,7 @@ void waitForRasPi() {
       Serial.println("READY"); //return "READY" signal to RasPi
       digitalWrite(readyLedPin, HIGH); //turn on READY status LED
     }
-    //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer
-    delay(500);  
+    //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer 
   }
 }
 
@@ -116,7 +119,7 @@ void sendData() { //writes load and angle data to serial output, separated by co
   Serial.print(loadCellVal);
   Serial.print(",");
   Serial.println(potVal);
-}
+}  
 
 boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to indicate whether to accept or discard data from last test
   int lastAcceptState = 0;
