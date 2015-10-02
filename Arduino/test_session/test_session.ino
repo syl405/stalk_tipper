@@ -92,8 +92,10 @@ void loop() {
 }
 
 void waitForRasPi() {
+  
   String stringReceived; //line received from RasPi
   boolean rasPiReady = false;
+  long int waitStartTime = millis(); //save starting time of the loop
   
   while (rasPiReady == false) {
     Serial.println("WAITING");
@@ -106,7 +108,7 @@ void waitForRasPi() {
       digitalWrite(readyLedPin, HIGH); //turn on READY status LED
     }
     //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer
-    delay(50);  
+    delay(500);  
   }
 }
 
