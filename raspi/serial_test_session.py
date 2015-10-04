@@ -1,20 +1,7 @@
 import serial
 import time
+import os
 import json
-
-#======================
-#ESTABLISH SERIAL COMMS
-#======================
-start = time.time()																#save start time
-while True:																	
-	try:
-		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
-	except:
-		if time.time() - start > 30:
-			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
-	finally:
-		print "Serial comms established"
-		break																	#break out of loop once serial comms established
 
 def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 #*******************************************************************************
@@ -32,7 +19,38 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
-	return False
+
+#======================
+#ESTABLISH SERIAL COMMS
+#======================
+start = time.time()																#save start time
+while True:																	
+	try:
+		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
+	except:
+		if time.time() - start > 30:
+			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
+	finally:
+		print "Serial comms established"
+		break																	#break out of loop once serial comms established
+	return False																#return false if serial comms not established after pre-specified time
+
+#=============================================
+#SETUP DIRECTORY STRUCTURE TO STORE TEST FILES
+#=============================================
+dirPath = "~/Documents/biomechanics/stalk_tipper/test_data"						#literal specifying location for all test data
+datePrefix = time.strftime("%d%m%y")											#get system date as a string
+if !os.path.exists(dirPath + datePrefix):										#check if directory for today already exists
+	os.makedirs(dirPath + datePrefix)											#make directory
+elif os.path.isdir(dirPath + datePrefix):										#if directory already exists continue test numbering from last time
+	testFileList = os.lisdir(dirPath + datePrefix)								#list all elements in the existing directory
+	lastTestID = 0																#highest test ID amongst existing test files
+	for file in testFileList:
+		if file[len(file)-4:len(file)] == test:									#check if file is a test data file
+			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
+				lastTestID = int(file[4:8])										#make current testID last greatest ID
+	
+	
 
 #=======================================================
 #MAIN LOOP, ONE ITERATION PER READY>TEST>CONFIRM>WRITE CYCLE
