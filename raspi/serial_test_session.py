@@ -1,4 +1,5 @@
 import serial
+import json
 
 #======================
 #ESTABLISH SERIAL COMMS
@@ -6,7 +7,7 @@ import serial
 start = time.clock()															#save start time
 while True																		
 	try:
-		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)
+		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
 	except:
 		if time.clock() - start > 30:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
@@ -34,13 +35,49 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#----------------------------------------------------------------------
 	if !listenAndWait(arduinoSer, "READY", 10):
 		raise IOError("Timeout: Arduino not ready for test")					#raise exception if "READY" not received after 10s
-	angle = []
-	load = []
+	angleList = []
+	loadList = []
+	
+	#--------------------------------------------------
+	#WAIT FOR TEST BEGIN SIGNAL AND GET TEST IDENTIFIER
+	#--------------------------------------------------
+	if !listenAndWait(arduinoSer, "BEGIN", 300, 5):								#listen for test begin signal and require new handshake if test not started within 5 mins
+		 continue
+	idLine = arduinoSer.readline()												#read in line containing test ID number
+	if idLine[0:7] != "TESTID=":
+		raise IOError("Invalid test ID line received")
+	else:
+		testId = int(idLine[7:end])
+
 	
 	#---------------------------
 	#SAVE TEST DATA TO VARIABLES
 	#---------------------------
-	if !listenAndWait(arduinoSer, "BEGIN", 600, 5):
+	lineReceived = arduinoSer.readline()										#read in next line from serial buffer
+	while lineReceived[0:3] != "END":
+		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
+		angleList.append(angleReading)												#append load and angle readings to lists
+		loadList.append(loadReading)
+	if idLine[0:7] != "TESTID=":
+		raise IOError("Invalid test ID line received")
+	else if int(idLine[7:end]) != char(testId):									#check if same test ID received at beginning and end of test
+		raise IOError("Different test ID supplied at beginning and end of test")
+
+	#-----------------------------------------------------------------------------
+	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP
+	#-----------------------------------------------------------------------------
+	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (waiting until some signal is received)
+	if lineReceived == "ACCEPT":
+		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
+		filename = "test" + char(testId).zfill(4) + ".test"						#formulate constant length filename based on test ID
+		fileObj = open(filename,"w")											#open file to write
+		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
+		fileObj.close()															#close file
+	else if lineReceived = "REJECT":
+		continue
+	else:
+		raise IOError("Invalid accept/reject instruction received")
+
 
 #TO-DO: WRITE FUNCTION TO LISTEN FOR SIGNAL FOR SPECIFIC NUMBER OF LOOPS ITERATIONS OR # OF SECONDS THEN REUSE CODE
 
@@ -56,7 +93,7 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 	keyword = keyword(0:n_compare-1)											#automatically truncate unnecessarily long keyword to save memory
 	startTime = time.clock()
 	while time.clock() - startTime < timeOut:									#check if specified duration has elapsed
-		lineIn = serObj.readline()(0:n_compare-1)								#read from serial port and truncate to number of characters to compare
+		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
 	return False
