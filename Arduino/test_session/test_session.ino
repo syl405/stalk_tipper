@@ -50,14 +50,16 @@ void loop() {
         digitalWrite(testStatusLedPin, HIGH); //turn on test status LED
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
         testId ++; //increment testId
-        Serial.print("BEGIN TESTID="); //keyword to start test
+        Serial.println("BEGIN"); //keyword to start test
+        Serial.print("TESTID="); //testID on new line
         Serial.println(testId); //unique test identifier
       }
       else { //if test was underway
         testUnderway = false; //stop test
         digitalWrite(testStatusLedPin, LOW); //turn off test status LED
-        Serial.print("END TESTID=");
-        Serial.println(testId);
+        Serial.println("END"); //keyword to end test
+        Serial.print("TESTID=");  //testID on new line
+        Serial.println(testId); //unique test identifier
         
         if (promptAcceptReject(dataAcceptButtonPin, dataRejectButtonPin) == true) {
           acceptData();
