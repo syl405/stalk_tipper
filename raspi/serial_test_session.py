@@ -29,25 +29,34 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	arduinoSer.write("READY")
 
 	
-	#------------------------------------
-	#CHECK THAT ARDUINO IS READY FOR TEST
-	#------------------------------------
+	#----------------------------------------------------------------------
+	#CHECK THAT ARDUINO IS READY FOR TEST AND INITIALISE TEST DATA VARIABLE
+	#----------------------------------------------------------------------
 	if !listenAndWait(arduinoSer, "READY", 10):
 		raise IOError("Timeout: Arduino not ready for test")					#raise exception if "READY" not received after 10s
-
+	angle = []
+	load = []
 	
+	#---------------------------
+	#SAVE TEST DATA TO VARIABLES
+	#---------------------------
+	if !listenAndWait(arduinoSer, "BEGIN", 600, 5):
 
 #TO-DO: WRITE FUNCTION TO LISTEN FOR SIGNAL FOR SPECIFIC NUMBER OF LOOPS ITERATIONS OR # OF SECONDS THEN REUSE CODE
 
-def listenAndWait(serObj, keyword, timeOut):
+def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 #*******************************************************************************
 #Takes a serial object and listens for a keyword for a duration (specified in s)
 #immediately returns True once keyword received; returns False if keyword
-#not received at the end of specified duration.
+#not received at the end of specified duration. User can specify to compare for
+#exact match or to compare the n first characters in a line.
 #*******************************************************************************
+	if n_compare < 0:															#if n_compare not specified, default to comparing for exact match
+		n_compare = len(keyword)
+	keyword = keyword(0:n_compare-1)											#automatically truncate unnecessarily long keyword to save memory
 	startTime = time.clock()
 	while time.clock() - startTime < timeOut:									#check if specified duration has elapsed
-		lineIn = serObj.readline()												#read from serial port
+		lineIn = serObj.readline()(0:n_compare-1)								#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
 	return False
