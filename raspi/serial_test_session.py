@@ -8,14 +8,13 @@ import json
 start = time.time()																#save start time
 while True:																	
 	try:
-		arduinoSer = serial.Serial('/dev/ttyUSB1',115200)						#no timeout specified, need to handle silent line in rest of code
+		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
 	except:
 		if time.time() - start > 30:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
 	finally:
 		print "Serial comms established"
 		break																	#break out of loop once serial comms established
-
 
 def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 #*******************************************************************************
@@ -27,15 +26,13 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 	serObj.flushInput()
 	if n_compare < 0:															#if n_compare not specified, default to comparing for exact match
 		n_compare = len(keyword)
-	keyword = keyword[0:n_compare]											#automatically truncate unnecessarily long keyword to save memory
+	keyword = keyword[0:n_compare]												#automatically truncate unnecessarily long keyword to save memory
 	startTime = time.time()
 	while time.time() - startTime < timeOut:									#check if specified duration has elapsed
 		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
 	return False
-
-
 
 #=======================================================
 #MAIN LOOP, ONE ITERATION PER READY>TEST>CONFIRM>WRITE CYCLE
@@ -58,6 +55,8 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#----------------------------------------------------------------------
 	if listenAndWait(arduinoSer, "READY", 10, 5) != True:
 		raise IOError("Timeout: Arduino not ready for test")					#raise exception if "READY" not received after 10s
+
+	print "Arduino ready for test" #debug
 	angleList = []
 	loadList = []
 	
@@ -70,33 +69,38 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	if idLine[0:7] != "TESTID=":
 		raise IOError("Invalid test ID line received")
 	else:
-		testId = int(idLine[7:end])
+		testId = int(idLine[7:len(idLine)])
+	print "test " + str(testId) + " started" #debug
 
-	
 	#---------------------------
 	#SAVE TEST DATA TO VARIABLES
 	#---------------------------
-	lineReceived = arduinoSer.readline()										#read in next line from serial buffer
+	lineReceived = arduinoSer.readline()										#read in first line of test data
 	while lineReceived[0:3] != "END":
+		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
-		angleList.append(angleReading)											#append load and angle readings to lists
-		loadList.append(loadReading)
+		angleList.append(int(angleReading))										#append load and angle readings to lists
+		loadList.append(int(loadReading))
+		lineReceived = arduinoSer.readline()									#read in next line of test data
+	idLine = arduinoSer.readline()												#read in line following test end signal to get testID
 	if idLine[0:7] != "TESTID=":
 		raise IOError("Invalid test ID line received")
-	elif int(idLine[7:end]) != testId:											#check if same test ID received at beginning and end of test
+	elif int(idLine[7:len(idLine)]) != testId:									#check if same test ID received at beginning and end of test
 		raise IOError("Different test ID supplied at beginning and end of test")
+	print "test " + str(testId) + " ended" #debug
 
 	#-----------------------------------------------------------------------------
 	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP
 	#-----------------------------------------------------------------------------
 	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (waiting until some signal is received)
-	if lineReceived == "ACCEPT":
+	print lineReceived
+	if lineReceived[0:6] == "ACCEPT":
 		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
-		filename = "test" + char(testId).zfill(4) + ".test"						#formulate constant length filename based on test ID
+		filename = "test" + str(testId).zfill(4) + ".test"						#formulate constant length filename based on test ID
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
 		fileObj.close()															#close file
-	elif lineReceived == "REJECT":
+	elif lineReceived[0:6] == "REJECT":
 		continue
 	else:
 		raise IOError("Invalid accept/reject instruction received")
