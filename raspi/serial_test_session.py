@@ -24,9 +24,10 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 #not received at the end of specified duration. User can specify to compare for
 #exact match or to compare the n first characters in a line.
 #*******************************************************************************
+	serObj.flushInput()
 	if n_compare < 0:															#if n_compare not specified, default to comparing for exact match
 		n_compare = len(keyword)
-	keyword = keyword[0:n_compare-1]											#automatically truncate unnecessarily long keyword to save memory
+	keyword = keyword[0:n_compare]											#automatically truncate unnecessarily long keyword to save memory
 	startTime = time.time()
 	while time.time() - startTime < timeOut:									#check if specified duration has elapsed
 		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
@@ -43,7 +44,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#------------------------------------
 	#CHECK THAT ARDUINO IS WAITING FOR TEST
 	#------------------------------------
-	if listenAndWait(arduinoSer, "WAITING", 10) != True:
+	if listenAndWait(arduinoSer, "WAITING", 10, 7) != True:
 		raise IOError("Timeout: Arduino not waiting for test")					#raise exception if "WAITING" not received after 10s
 	
 	#----------------------------
@@ -55,7 +56,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#----------------------------------------------------------------------
 	#CHECK THAT ARDUINO IS READY FOR TEST AND INITIALISE TEST DATA VARIABLE
 	#----------------------------------------------------------------------
-	if listenAndWait(arduinoSer, "READY", 10) != True:
+	if listenAndWait(arduinoSer, "READY", 10, 5) != True:
 		raise IOError("Timeout: Arduino not ready for test")					#raise exception if "READY" not received after 10s
 	angleList = []
 	loadList = []
@@ -99,10 +100,4 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		continue
 	else:
 		raise IOError("Invalid accept/reject instruction received")
-
-
-#TO-DO: WRITE FUNCTION TO LISTEN FOR SIGNAL FOR SPECIFIC NUMBER OF LOOPS ITERATIONS OR # OF SECONDS THEN REUSE CODE
-
-
-
 
