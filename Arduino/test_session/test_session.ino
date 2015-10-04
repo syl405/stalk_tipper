@@ -1,7 +1,9 @@
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
+#include <SoftwareSerial.h>
 
 Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
+SoftwareSerial blueSerial(10,11); //instantiate software serial port
 
 //constants to set pin numbers
 const int readyLedPin = 4;
@@ -21,7 +23,8 @@ int lastTestStartStopButtonState = 0;
 unsigned int testId = 0;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600); //initialise hardware serial port
+  blueSerial.begin(57600); //initialise software serial port
   ads1115.begin(); //initialise ADS object
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
