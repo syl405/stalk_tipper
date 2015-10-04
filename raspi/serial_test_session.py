@@ -6,7 +6,7 @@ import serial
 start = time.clock()															#save start time
 while True																		
 	try:
-		serobj = serial.Serial('/dev/ttyUSB0',115200)
+		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)
 	except:
 		if time.clock() - start > 30:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
@@ -18,27 +18,38 @@ while True
 #=======================================================
 while True: 																	#master loop, one iteration per initialize>test>write cycle
 	#------------------------------------
+	#CHECK THAT ARDUINO IS WAITING FOR TEST
+	#------------------------------------
+	if !listenAndWait(arduinoSer, "WAITING", 10):
+		raise IOError("Timeout: Arduino not waiting for test")					#raise exception if "WAITING" not received after 10s
+	
+	#----------------------------
+	#SEND READY SIGNAL TO ARDUINO
+	#----------------------------
+	arduinoSer.write("READY")
+
+	
+	#------------------------------------
 	#CHECK THAT ARDUINO IS READY FOR TEST
 	#------------------------------------
-	line = serobj.readline() 													#read in and store line from arduino
-	if line == "WAITING": 														#if waiting signal received
-		serobj.write("READY") 													#send ready signal
-		arduino_ready = False 													#boolean for arduino state
-		
-		while !arduino_ready:
-			line = serobj.readline():
-			if line == "READY": 												#arduino returns ready signal
-				arduino_ready = True; 											#toggle boolean to true and exit loop
-			#TO-DO: RAISE EXCEPTION IF TIMEOUT
+	if !listenAndWait(arduinoSer, "READY", 10):
+		raise IOError("Timeout: Arduino not ready for test")					#raise exception if "READY" not received after 10s
 
 	
 
 #TO-DO: WRITE FUNCTION TO LISTEN FOR SIGNAL FOR SPECIFIC NUMBER OF LOOPS ITERATIONS OR # OF SECONDS THEN REUSE CODE
 
-def listenAndWait(serobj, keyword, seconds)
+def listenAndWait(serObj, keyword, timeOut):
 #*******************************************************************************
 #Takes a serial object and listens for a keyword for a duration (specified in s)
 #immediately returns True once keyword received; returns False if keyword
 #not received at the end of specified duration.
 #*******************************************************************************
-		
+	startTime = time.clock()
+	while time.clock() - startTime < timeOut:									#check if specified duration has elapsed
+		lineIn = serObj.readline()												#read from serial port
+		if lineIn == keyword:
+			return True															#immediately return True if keyword detected
+	return False
+
+
