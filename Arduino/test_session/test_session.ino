@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
 
-Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
+Adafruit_ADS1115 ads1115; //instantiate ADS object using default address 0x48
 
 //constants to set pin numbers
 const int readyLedPin = 4;
@@ -18,7 +18,7 @@ int16_t potVal = 0;
 boolean testUnderway = false;
 int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
-unsigned int testId = 0;
+unsigned int testId = -1;
 
 void setup() {
   Serial.begin(115200);
@@ -93,6 +93,7 @@ void loop() {
   delay(100); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
 }
 
+
 void waitForRasPi() {
   
   String stringReceived; //line received from RasPi
@@ -155,7 +156,7 @@ boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to ind
 }
 
 void acceptData() {
-  Serial.print("ACCEPT");
+  Serial.println("ACCEPT");
   //testing - blink test status led 3 times
   for (int i = 0; i < 3; i++) {
     digitalWrite(testStatusLedPin, HIGH);
@@ -168,7 +169,7 @@ void acceptData() {
 }
 
 void rejectData() {
-  Serial.print("REJECT");
+  Serial.println("REJECT");
   //testing - blink ready status led 3 times
   for (int i = 0; i < 3; i++) {
     digitalWrite(readyLedPin, HIGH);
