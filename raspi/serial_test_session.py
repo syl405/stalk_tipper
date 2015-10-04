@@ -15,7 +15,7 @@ while True
 		break																	#break out of loop once serial comms established
 
 #=======================================================
-#MAIN LOOP, ONE ITER. PER READY>TEST>CONFIRM>WRITE CYCLE
+#MAIN LOOP, ONE ITERATION PER READY>TEST>CONFIRM>WRITE CYCLE
 #=======================================================
 while True: 																	#master loop, one iteration per initialize>test>write cycle
 	#------------------------------------
