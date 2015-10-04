@@ -5,12 +5,12 @@ import json
 #======================
 #ESTABLISH SERIAL COMMS
 #======================
-start = time.clock()															#save start time
+start = time.time()																#save start time
 while True:																	
 	try:
 		arduinoSer = serial.Serial('/dev/ttyUSB1',115200)						#no timeout specified, need to handle silent line in rest of code
 	except:
-		if time.clock() - start > 30:
+		if time.time() - start > 30:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
 	finally:
 		print "Serial comms established"
@@ -27,8 +27,8 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 	if n_compare < 0:															#if n_compare not specified, default to comparing for exact match
 		n_compare = len(keyword)
 	keyword = keyword[0:n_compare-1]											#automatically truncate unnecessarily long keyword to save memory
-	startTime = time.clock()
-	while time.clock() - startTime < timeOut:									#check if specified duration has elapsed
+	startTime = time.time()
+	while time.time() - startTime < timeOut:									#check if specified duration has elapsed
 		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
