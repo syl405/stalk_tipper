@@ -178,5 +178,6 @@ void rejectData() {
     delay(100);
   }
   //testing
+  testId --; //decrement by 1 since last test rejected
   waitForRasPi();
 }
