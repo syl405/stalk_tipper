@@ -49,7 +49,8 @@ elif os.path.isdir(dirPath + datePrefix):										#if directory already exists 
 		if file[len(file)-4:len(file)] == test:									#check if file is a test data file
 			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
 				lastTestID = int(file[4:8])										#make current testID last greatest ID
-	
+lastTestID += 1																	#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
+
 	
 
 #=======================================================
@@ -110,11 +111,11 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#-----------------------------------------------------------------------------
 	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP
 	#-----------------------------------------------------------------------------
-	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (waiting until some signal is received)
+	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (blocking until some signal is received)
 	print lineReceived
 	if lineReceived[0:6] == "ACCEPT":
 		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
-		filename = "test" + str(testId).zfill(4) + ".test"						#formulate constant length filename based on test ID
+		filename = "test" + str(lastTestId + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
 		fileObj.close()															#close file
