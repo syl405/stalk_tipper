@@ -24,7 +24,7 @@ unsigned int testId = 0;
 
 void setup() {
   Serial.begin(57600); //initialise hardware serial port
-  blueSerial.begin(57600); //initialise software serial port
+  blueSerial.begin(9600); //initialise software serial port
   ads1115.begin(); //initialise ADS object
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
@@ -105,7 +105,7 @@ void waitForRasPi() {
   boolean allReady = false;
   long int waitStartTime = millis(); //save starting time of the loop
   
-  while (rasPiReady == false) {
+  while (allReady == false) {
     long int curTime = millis(); //time at the start of this loop iteration
     if (curTime - waitStartTime > 500) {
       Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
