@@ -113,9 +113,12 @@ void waitForRasPi() {
   boolean btReady = false;
   long int waitStartTime = millis(); //save starting time of the loop
   
+  flushMainIncoming(); //flush main serial port in
+  flushSoftwareIncoming(); //flush software serial port incoming buffer
+  
   while (raspiReady == false || btReady == false) {
     long int curTime = millis(); //time at the start of this loop iteration
-    if (curTime - waitStartTime > 500) {
+    if (curTime - waitStartTime > 1000) {
       Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
       blueSerial.println("WAITING");
       waitStartTime = curTime; //reset timer
@@ -206,4 +209,16 @@ void rejectData() {
   //testing
   testId --; //decrement by 1 since last test rejected
   waitForRasPi();
+}
+
+void flushMainIncoming() {
+  while (Serial.available() > 0) {
+    Serial.read();
+  }
+}
+
+void flushSoftwareIncoming() {
+  while (blueSerial.available() > 0) {
+    blueSerial.read();
+  }
 }
