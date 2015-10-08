@@ -25,7 +25,7 @@ int lastTestStartStopButtonState = 0;
 unsigned int testId = -1;
 
 void setup() {
-  Serial.begin(57600); //initialise hardware serial port
+  //Serial.begin(57600); //initialise hardware serial port
   blueSerial.begin(9600); //initialise software serial port
   ads1115.begin(); //initialise ADS object
   pinMode(readyLedPin, OUTPUT);
@@ -55,21 +55,21 @@ void loop() {
         digitalWrite(testStatusLedPin, HIGH); //turn on test status LED
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
         testId ++; //increment testId
-        Serial.println("BEGIN"); //keyword to start test
+//        Serial.println("BEGIN"); //keyword to start test
         blueSerial.println("BEGIN");
-        Serial.print("TESTID="); //testID on new line
+//        Serial.print("TESTID="); //testID on new line
         blueSerial.print("TESTID=");
-        Serial.println(testId); //unique test identifier
+//        Serial.println(testId); //unique test identifier
         blueSerial.println(testId);
       }
       else { //if test was underway
         testUnderway = false; //stop test
         digitalWrite(testStatusLedPin, LOW); //turn off test status LED
-        Serial.println("END"); //keyword to end test
+//        Serial.println("END"); //keyword to end test
         blueSerial.println("END");
-        Serial.print("TESTID=");  //testID on new line
+//        Serial.print("TESTID=");  //testID on new line
         blueSerial.print("TESTID=");
-        Serial.println(testId); //unique test identifier
+//        Serial.println(testId); //unique test identifier
         blueSerial.println(testId);
         
         if (promptAcceptReject(dataAcceptButtonPin, dataRejectButtonPin) == true) {
@@ -107,45 +107,45 @@ void loop() {
 
 void waitForRasPi() {
   
-  String raspiStringReceived = ""; //line received from RasPi
+  //String raspiStringReceived = ""; //line received from RasPi
   String blueStringReceived = ""; //line received from tablet
-  boolean raspiReady = false;
+  //boolean raspiReady = false;
   boolean btReady = false;
   long int waitStartTime = millis(); //save starting time of the loop
   
-  flushMainIncoming(); //flush main serial port in
+  //flushMainIncoming(); //flush main serial port in
   flushSoftwareIncoming(); //flush software serial port incoming buffer
   
-  while (raspiReady == false || btReady == false) {
+  while (btReady == false) {
     long int curTime = millis(); //time at the start of this loop iteration
     if (curTime - waitStartTime > 1000) {
-      Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
+      //Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
       blueSerial.println("WAITING");
       waitStartTime = curTime; //reset timer
     }
-    if (Serial.available() > 0) { //if data is available in the serial buffer
-      raspiStringReceived += char(Serial.read()); //read next byte from buffer and append to string
-    }
+    //if (Serial.available() > 0) { //if data is available in the serial buffer
+      //raspiStringReceived += char(Serial.read()); //read next byte from buffer and append to string
+    //}
     if (blueSerial.available() > 0) { //if data is available in the software serial buffer
       blueStringReceived += char(blueSerial.read()); //read next byte from bluetooth buffer and append to string
     }
-    if (raspiStringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
-      raspiReady = true;
-    }
+    //if (raspiStringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
+      //raspiReady = true;
+    //}
     if (blueStringReceived.endsWith("READY")) { //check whether full "READY" signal received from bluetooth device
       btReady = true;
     }
     //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer 
   }
-  Serial.println("READY"); //return "READY" signal to RasPi
+  //Serial.println("READY"); //return "READY" signal to RasPi
   blueSerial.println("READY");
   digitalWrite(readyLedPin, HIGH); //turn on READY status LED
 }
 
 void sendData() { //writes load and angle data to serial output, separated by comma
-  Serial.print(loadCellVal);
-  Serial.print(",");
-  Serial.println(potVal);
+  //Serial.print(loadCellVal);
+  //Serial.print(",");
+  //Serial.println(potVal);
   blueSerial.print(loadCellVal);
   blueSerial.print(",");
   blueSerial.println(potVal);
@@ -183,7 +183,7 @@ boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to ind
 }
 
 void acceptData() {
-  Serial.println("ACCEPT");
+  //Serial.println("ACCEPT");
   blueSerial.println("ACCEPT");
   //testing - blink test status led 3 times
   for (int i = 0; i < 3; i++) {
@@ -197,7 +197,7 @@ void acceptData() {
 }
 
 void rejectData() {
-  Serial.println("REJECT");
+  //Serial.println("REJECT");
   blueSerial.println("REJECT");
   //testing - blink ready status led 3 times
   for (int i = 0; i < 3; i++) {
@@ -211,11 +211,11 @@ void rejectData() {
   waitForRasPi();
 }
 
-void flushMainIncoming() {
-  while (Serial.available() > 0) {
-    Serial.read();
-  }
-}
+//void flushMainIncoming() {
+  //while (Serial.available() > 0) {
+    //Serial.read();
+  //}
+//}
 
 void flushSoftwareIncoming() {
   while (blueSerial.available() > 0) {
