@@ -107,12 +107,13 @@ void loop() {
 
 void waitForRasPi() {
   
-  String stringReceived; //line received from RasPi
-  String blueStringReceived; //line received from tablet
-  boolean allReady = false;
+  String raspiStringReceived = ""; //line received from RasPi
+  String blueStringReceived = ""; //line received from tablet
+  boolean raspiReady = false;
+  boolean btReady = false;
   long int waitStartTime = millis(); //save starting time of the loop
   
-  while (allReady == false) {
+  while (raspiReady == false || btReady == false) {
     long int curTime = millis(); //time at the start of this loop iteration
     if (curTime - waitStartTime > 500) {
       Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
@@ -120,17 +121,22 @@ void waitForRasPi() {
       waitStartTime = curTime; //reset timer
     }
     if (Serial.available() > 0) { //if data is available in the serial buffer
-      stringReceived += char(Serial.read()); //read next byte from buffer and append to string
+      raspiStringReceived += char(Serial.read()); //read next byte from buffer and append to string
+    }
+    if (blueSerial.available() > 0) { //if data is available in the software serial buffer
       blueStringReceived += char(blueSerial.read()); //read next byte from bluetooth buffer and append to string
     }
-    if (stringReceived.endsWith("READY") && blueStringReceived.endsWith("READY")) { //check whether full "READY" signal received from both RasPi and tablet
-      allReady = true;
-      Serial.println("READY"); //return "READY" signal to RasPi
-      blueSerial.println("READY");
-      digitalWrite(readyLedPin, HIGH); //turn on READY status LED
+    if (raspiStringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
+      raspiReady = true;
+    }
+    if (blueStringReceived.endsWith("READY")) { //check whether full "READY" signal received from bluetooth device
+      btReady = true;
     }
     //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer 
   }
+  Serial.println("READY"); //return "READY" signal to RasPi
+  blueSerial.println("READY");
+  digitalWrite(readyLedPin, HIGH); //turn on READY status LED
 }
 
 void sendData() { //writes load and angle data to serial output, separated by comma
