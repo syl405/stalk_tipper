@@ -1,7 +1,11 @@
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
+#include <SoftwareSerial.h>
 
-Adafruit_ADS1115 ads1115; //instantiate ADS object using default address 0x48
+
+Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
+SoftwareSerial blueSerial(10,11); //instantiate software serial port
+
 
 //constants to set pin numbers
 const int readyLedPin = 4;
@@ -21,7 +25,8 @@ int lastTestStartStopButtonState = 0;
 unsigned int testId = -1;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600); //initialise hardware serial port
+  blueSerial.begin(9600); //initialise software serial port
   ads1115.begin(); //initialise ADS object
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
@@ -51,15 +56,21 @@ void loop() {
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
         testId ++; //increment testId
         Serial.println("BEGIN"); //keyword to start test
+        blueSerial.println("BEGIN");
         Serial.print("TESTID="); //testID on new line
+        blueSerial.print("TESTID=");
         Serial.println(testId); //unique test identifier
+        blueSerial.println(testId);
       }
       else { //if test was underway
         testUnderway = false; //stop test
         digitalWrite(testStatusLedPin, LOW); //turn off test status LED
         Serial.println("END"); //keyword to end test
+        blueSerial.println("END");
         Serial.print("TESTID=");  //testID on new line
+        blueSerial.print("TESTID=");
         Serial.println(testId); //unique test identifier
+        blueSerial.println(testId);
         
         if (promptAcceptReject(dataAcceptButtonPin, dataRejectButtonPin) == true) {
           acceptData();
@@ -97,21 +108,25 @@ void loop() {
 void waitForRasPi() {
   
   String stringReceived; //line received from RasPi
-  boolean rasPiReady = false;
+  String blueStringReceived; //line received from tablet
+  boolean allReady = false;
   long int waitStartTime = millis(); //save starting time of the loop
   
-  while (rasPiReady == false) {
+  while (allReady == false) {
     long int curTime = millis(); //time at the start of this loop iteration
     if (curTime - waitStartTime > 500) {
       Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
+      blueSerial.println("WAITING");
       waitStartTime = curTime; //reset timer
     }
     if (Serial.available() > 0) { //if data is available in the serial buffer
       stringReceived += char(Serial.read()); //read next byte from buffer and append to string
+      blueStringReceived += char(blueSerial.read()); //read next byte from bluetooth buffer and append to string
     }
-    if (stringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
-      rasPiReady = true;
+    if (stringReceived.endsWith("READY") && blueStringReceived.endsWith("READY")) { //check whether full "READY" signal received from both RasPi and tablet
+      allReady = true;
       Serial.println("READY"); //return "READY" signal to RasPi
+      blueSerial.println("READY");
       digitalWrite(readyLedPin, HIGH); //turn on READY status LED
     }
     //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer 
@@ -122,6 +137,9 @@ void sendData() { //writes load and angle data to serial output, separated by co
   Serial.print(loadCellVal);
   Serial.print(",");
   Serial.println(potVal);
+  blueSerial.print(loadCellVal);
+  blueSerial.print(",");
+  blueSerial.println(potVal);
 }  
 
 boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to indicate whether to accept or discard data from last test
@@ -157,6 +175,7 @@ boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to ind
 
 void acceptData() {
   Serial.println("ACCEPT");
+  blueSerial.println("ACCEPT");
   //testing - blink test status led 3 times
   for (int i = 0; i < 3; i++) {
     digitalWrite(testStatusLedPin, HIGH);
@@ -170,6 +189,7 @@ void acceptData() {
 
 void rejectData() {
   Serial.println("REJECT");
+  blueSerial.println("REJECT");
   //testing - blink ready status led 3 times
   for (int i = 0; i < 3; i++) {
     digitalWrite(readyLedPin, HIGH);
