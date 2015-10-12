@@ -26,30 +26,33 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 start = time.time()																#save start time
 while True:																	
 	try:
-		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
+		arduinoSer = serial.Serial('/dev/ttyUSB1',57600)						#no timeout specified, need to handle silent line in rest of code
+		print "Serial comms established"
+		break
 	except:
 		if time.time() - start > 30:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
-	finally:
-		print "Serial comms established"
-		break																	#break out of loop once serial comms established
-	return False																#return false if serial comms not established after pre-specified time
+#	finally:
+#		print "Serial comms established"
+#		break																	#break out of loop once serial comms established
+#	return False																#return false if serial comms not established after pre-specified time
 
 #=============================================
 #SETUP DIRECTORY STRUCTURE TO STORE TEST FILES
 #=============================================
 dirPath = "~/Documents/biomechanics/stalk_tipper/test_data"						#literal specifying location for all test data
 datePrefix = time.strftime("%d%m%y")											#get system date as a string
-if !os.path.exists(dirPath + datePrefix):										#check if directory for today already exists
+lastTestID = 0																	#highest test ID amongst existing test files
+if os.path.exists(dirPath + datePrefix) != True:								#check if directory for today already exists
 	os.makedirs(dirPath + datePrefix)											#make directory
 elif os.path.isdir(dirPath + datePrefix):										#if directory already exists continue test numbering from last time
-	testFileList = os.lisdir(dirPath + datePrefix)								#list all elements in the existing directory
-	lastTestID = 0																#highest test ID amongst existing test files
+	testFileList = os.listdir(dirPath + datePrefix)								#list all elements in the existing directory
 	for file in testFileList:
 		if file[len(file)-4:len(file)] == test:									#check if file is a test data file
 			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
 				lastTestID = int(file[4:8])										#make current testID last greatest ID
-lastTestID += 1																	#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
+	lastTestID += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
+
 
 	
 
