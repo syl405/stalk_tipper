@@ -19,6 +19,7 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
+	return False
 
 #======================
 #ESTABLISH SERIAL COMMS
@@ -26,12 +27,12 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 start = time.time()																#save start time
 while True:																	
 	try:
-		arduinoSer = serial.Serial('/dev/ttyUSB0',57600)						#no timeout specified, need to handle silent line in rest of code
-		print "Serial comms established"
+		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
 		break
 	except:
 		if time.time() - start > 10:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
+print "Serial comms established"
 #	finally:
 #		print "Serial comms established"
 #		break																	#break out of loop once serial comms established
@@ -40,7 +41,7 @@ while True:
 #=============================================
 #SETUP DIRECTORY STRUCTURE TO STORE TEST FILES
 #=============================================
-dirPath = "~/Documents/biomechanics/stalk_tipper/test_data"						#literal specifying location for all test data
+dirPath = "test_data"															#literal specifying location for all test data
 datePrefix = time.strftime("%d%m%y")											#get system date as a string
 lastTestID = 0																	#highest test ID amongst existing test files
 if os.path.exists(dirPath + datePrefix) != True:								#check if directory for today already exists
@@ -70,6 +71,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#SEND READY SIGNAL TO ARDUINO
 	#----------------------------
 	arduinoSer.write("READY")
+	print "READY SIGNAL SENT" #debug
 
 	
 	#----------------------------------------------------------------------
@@ -118,7 +120,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	print lineReceived
 	if lineReceived[0:6] == "ACCEPT":
 		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
-		filename = "test" + str(lastTestId + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
+		filename = "test" + str(lastTestID + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
 		fileObj.close()															#close file
