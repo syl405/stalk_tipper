@@ -26,11 +26,11 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 start = time.time()																#save start time
 while True:																	
 	try:
-		arduinoSer = serial.Serial('/dev/ttyUSB1',57600)						#no timeout specified, need to handle silent line in rest of code
+		arduinoSer = serial.Serial('/dev/ttyUSB0',57600)						#no timeout specified, need to handle silent line in rest of code
 		print "Serial comms established"
 		break
 	except:
-		if time.time() - start > 30:
+		if time.time() - start > 10:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
 #	finally:
 #		print "Serial comms established"
