@@ -149,11 +149,6 @@ void waitForRasPi() {
     if (blueStringReceived.endsWith("READY")) { //check whether full "READY" signal received from bluetooth device
       btReady = true;
     }
-    //debug
-    Serial.print("raspi:");
-    Serial.println(raspiReady);
-    Serial.print("bt:");
-    Serial.println(btReady);
     //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer 
   }
   Serial.println("READY"); //return "READY" signal to RasPi
