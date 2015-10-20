@@ -19,6 +19,7 @@ def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 		lineIn = serObj.readline()[0:n_compare]									#read from serial port and truncate to number of characters to compare
 		if lineIn == keyword:
 			return True															#immediately return True if keyword detected
+	return False
 
 #======================
 #ESTABLISH SERIAL COMMS
@@ -27,29 +28,34 @@ start = time.time()																#save start time
 while True:																	
 	try:
 		arduinoSer = serial.Serial('/dev/ttyUSB0',115200)						#no timeout specified, need to handle silent line in rest of code
+		break
 	except:
-		if time.time() - start > 30:
+		if time.time() - start > 10:
 			raise IOError("Serial initialization timeout, check Arduino")		#raise error if fail to initialize serial comms after 30s
-	finally:
-		print "Serial comms established"
-		break																	#break out of loop once serial comms established
-	return False																#return false if serial comms not established after pre-specified time
+print "Serial comms established"
+#	finally:
+#		print "Serial comms established"
+#		break																	#break out of loop once serial comms established
+#	return False																#return false if serial comms not established after pre-specified time
 
 #=============================================
 #SETUP DIRECTORY STRUCTURE TO STORE TEST FILES
 #=============================================
-dirPath = "~/Documents/biomechanics/stalk_tipper/test_data"						#literal specifying location for all test data
+dirPath = "test_data"															#literal specifying location for all test data
 datePrefix = time.strftime("%d%m%y")											#get system date as a string
-if !os.path.exists(dirPath + datePrefix):										#check if directory for today already exists
+lastTestID = 0																	#highest test ID amongst existing test files
+if os.path.exists(dirPath + datePrefix) != True:								#check if directory for today already exists
 	os.makedirs(dirPath + datePrefix)											#make directory
+	print "Making new directory for today's test files"							#debug
 elif os.path.isdir(dirPath + datePrefix):										#if directory already exists continue test numbering from last time
-	testFileList = os.lisdir(dirPath + datePrefix)								#list all elements in the existing directory
-	lastTestID = 0																#highest test ID amongst existing test files
+	testFileList = os.listdir(dirPath + datePrefix)								#list all elements in the existing directory
 	for file in testFileList:
 		if file[len(file)-4:len(file)] == test:									#check if file is a test data file
 			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
 				lastTestID = int(file[4:8])										#make current testID last greatest ID
-lastTestID += 1																	#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
+	lastTestID += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
+	print "Continuing from previous test files"									#debug
+
 
 	
 
@@ -67,6 +73,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#SEND READY SIGNAL TO ARDUINO
 	#----------------------------
 	arduinoSer.write("READY")
+	print "READY SIGNAL SENT" #debug
 
 	
 	#----------------------------------------------------------------------
@@ -115,7 +122,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	print lineReceived
 	if lineReceived[0:6] == "ACCEPT":
 		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
-		filename = "test" + str(lastTestId + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
+		filename = dirPath + datePrefix + "/test" + str(lastTestID + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
 		fileObj.close()															#close file

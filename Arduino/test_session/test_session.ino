@@ -2,6 +2,11 @@
 #include <Adafruit_ADS1015.h>
 #include <SoftwareSerial.h>
 
+//define pins and ports for rotary encoder
+#define ENC_A 14
+#define ENC_B 15
+#define ENC_PORT PINC
+
 
 Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
 SoftwareSerial blueSerial(10,11); //instantiate software serial port
@@ -11,10 +16,11 @@ SoftwareSerial blueSerial(10,11); //instantiate software serial port
 const int readyLedPin = 4;
 const int testStatusLedPin = 3;
 const int testStartStopButtonPin = 2;
-const int dataAcceptButtonPin = 5;
-const int dataRejectButtonPin = 6;
+const int encoderButtonPin = 5;
+const int encoderGreenLedPin = 6;
+const int encoderRedLedPin = 7;
 
-//16-bit variables for ACDC outputs (force to 16-bits, equivalent to normal integer declaration on 16-bit boards)
+//16-bit variables for ADC outputs (force to 16-bits, equivalent to normal integer declaration on 16-bit boards)
 int16_t loadCellVal = 0;
 int16_t potVal = 0;
 
@@ -25,15 +31,23 @@ int lastTestStartStopButtonState = 0;
 unsigned int testId = -1;
 
 void setup() {
-  //Serial.begin(57600); //initialise hardware serial port
+  Serial.begin(115200); //initialise hardware serial port
   blueSerial.begin(9600); //initialise software serial port
   ads1115.begin(); //initialise ADS object
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
   pinMode(testStartStopButtonPin, INPUT);
-  pinMode(dataAcceptButtonPin, INPUT);
-  pinMode(dataRejectButtonPin, INPUT);
+  pinMode(encoderButtonPin, INPUT);
+  pinMode(ENC_A, INPUT);
+  pinMode(ENC_B, INPUT);
+  pinMode(encoderGreenLedPin, OUTPUT);
+  pinMode(encoderRedLedPin, OUTPUT);
   
+  //pullup encoder input pins and encoder LED pins (to turn them off, common anode)
+  digitalWrite(ENC_A, HIGH);
+  digitalWrite(ENC_B, HIGH);
+  digitalWrite(encoderGreenLedPin, HIGH);
+  digitalWrite(encoderRedLedPin, HIGH);
   //============================================================================
   //SEND "WAITING" SIGNAL REPEATEDLY WHILE LISTENING FOR READY SIGNAL FROM RASPI
   //============================================================================
@@ -72,7 +86,7 @@ void loop() {
 //        Serial.println(testId); //unique test identifier
         blueSerial.println(testId);
         
-        if (promptAcceptReject(dataAcceptButtonPin, dataRejectButtonPin) == true) {
+        if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
           acceptData();
         }
         else {
@@ -151,33 +165,71 @@ void sendData() { //writes load and angle data to serial output, separated by co
   blueSerial.println(potVal);
 }  
 
-boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to indicate whether to accept or discard data from last test
-  int lastAcceptState = 0;
-  int lastRejectState = 0;
-  int acceptState = digitalRead(acceptPin);
-  int rejectState = digitalRead(rejectPin);
+//boolean promptAcceptReject(int acceptPin, int rejectPin) { //prompts user to indicate whether to accept or discard data from last test
+boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin) { //prompts user to indicate whether to accept or discard data from last test
+  int lastPushbuttonState = digitalRead(pushbuttonPin);
+  int pushbuttonState = digitalRead(pushbuttonPin);
+  //int lastAcceptState = 0;
+  //int lastRejectState = 0;
+  //int acceptState = digitalRead(acceptPin);
+  //int rejectState = digitalRead(rejectPin);
   int accepted = 0; //+1 if accepted, -1 if rejected, 0 if not yet indicated
+  int curSelection = 1;
   
   //enter loop to wait for user to press either the accept or reject button
   while (accepted == 0) {
-    acceptState = digitalRead(acceptPin);
-    rejectState = digitalRead(rejectPin);
+    int8_t tmpdata;
+    /**/
+    tmpdata = read_encoder();
+    
+    if (tmpdata) {
+      if (tmpdata > 0) {
+        curSelection = 1;
+      }
+      else{
+        curSelection = -1;
+      }
+    }
+    
+    //LED output values reversed due to common anode LED design on encoder
+    if (curSelection == 1) {
+      digitalWrite(acceptLedPin, LOW);
+      digitalWrite(rejectLedPin, HIGH);
+    }
+    else {
+      digitalWrite(acceptLedPin, HIGH);
+      digitalWrite(rejectLedPin, LOW);
+    }
+    
+    pushbuttonState = digitalRead(pushbuttonPin);
+    if (pushbuttonState != lastPushbuttonState && pushbuttonState == HIGH) { //if confirm button is newly depressed
+      accepted = curSelection;
+    }
+    lastPushbuttonState = pushbuttonState;
+    //acceptState = digitalRead(acceptPin);
+    //rejectState = digitalRead(rejectPin);
     //NOTE: this if...else block means that data will be accepted if both buttons are depressed at the same time
     //TO-DO: come up with alternative structure that does not make this arbitrary (albeit conservative) assumption and instead ignores simultaneous presses
-    if (acceptState != lastAcceptState && acceptState == HIGH) { //if accept button is newly depressed
-      accepted = 1;
-    }
-    else if (rejectState != lastRejectState && rejectState == HIGH) { //if reject button is newly depressed
-      accepted = -1;
-    }
-    lastAcceptState = acceptState;
-    lastRejectState = rejectState;
+    //if (acceptState != lastAcceptState && acceptState == HIGH) { //if accept button is newly depressed
+      //accepted = 1;
+    //}
+    //else if (rejectState != lastRejectState && rejectState == HIGH) { //if reject button is newly depressed
+      //accepted = -1;
+    //}
+    //lastAcceptState = acceptState;
+    //lastRejectState = rejectState;
   }
   
   if (accepted == 1) {
+    //turn off selection indicator LEDS
+    digitalWrite(acceptLedPin, HIGH);
+    digitalWrite(rejectLedPin, HIGH);
     return true;
   }
   else if (accepted == -1) {
+    //turn off selection indicator LEDS
+    digitalWrite(acceptLedPin, HIGH);
+    digitalWrite(rejectLedPin, HIGH);
     return false;
   }
 }
@@ -221,4 +273,15 @@ void flushSoftwareIncoming() {
   while (blueSerial.available() > 0) {
     blueSerial.read();
   }
+}
+
+/* returns change in encoder state (-1,0,1) */
+int8_t read_encoder()
+{
+  static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+  static uint8_t old_AB = 0;
+  /**/
+  old_AB <<= 2;                   //remember previous state
+  old_AB |= ( ENC_PORT & 0x03 );  //add current state
+  return ( enc_states[( old_AB & 0x0f )]);
 }
