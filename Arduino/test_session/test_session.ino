@@ -9,7 +9,7 @@
 
 
 Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
-SoftwareSerial blueSerial(10,11); //instantiate software serial port
+SoftwareSerial blueSerial(11,12); //instantiate software serial port
 
 
 //constants to set pin numbers
