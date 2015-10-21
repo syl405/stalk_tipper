@@ -2,6 +2,8 @@ import serial
 import time
 import os
 import json
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 #*******************************************************************************
@@ -38,96 +40,43 @@ print "Serial comms established"
 #		break																	#break out of loop once serial comms established
 #	return False																#return false if serial comms not established after pre-specified time
 
-#=============================================
-#SETUP DIRECTORY STRUCTURE TO STORE TEST FILES
-#=============================================
-dirPath = "test_data"															#literal specifying location for all test data
-datePrefix = time.strftime("%d%m%y")											#get system date as a string
-lastTestID = 0																	#highest test ID amongst existing test files
-if os.path.exists(dirPath + datePrefix) != True:								#check if directory for today already exists
-	os.makedirs(dirPath + datePrefix)											#make directory
-	print "Making new directory for today's test files"							#debug
-elif os.path.isdir(dirPath + datePrefix):										#if directory already exists continue test numbering from last time
-	testFileList = os.listdir(dirPath + datePrefix)								#list all elements in the existing directory
-	for file in testFileList:
-		if file[len(file)-4:len(file)] == test:									#check if file is a test data file
-			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
-				lastTestID = int(file[4:8])										#make current testID last greatest ID
-	lastTestID += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
-	print "Continuing from previous test files"									#debug
-
-
-	
-
-#=======================================================
-#MAIN LOOP, ONE ITERATION PER READY>TEST>CONFIRM>WRITE CYCLE
-#=======================================================
-while True: 																	#master loop, one iteration per initialize>test>write cycle
-	#------------------------------------
-	#CHECK THAT ARDUINO IS WAITING FOR TEST
-	#------------------------------------
-	if listenAndWait(arduinoSer, "WAITING", 10, 7) != True:
-		raise IOError("Timeout: Arduino not waiting for test")					#raise exception if "WAITING" not received after 10s
-	
-	#----------------------------
-	#SEND READY SIGNAL TO ARDUINO
-	#----------------------------
-	arduinoSer.write("READY")
-	print "READY SIGNAL SENT" #debug
-
-	
-	#----------------------------------------------------------------------
-	#CHECK THAT ARDUINO IS READY FOR TEST AND INITIALISE TEST DATA VARIABLE
-	#----------------------------------------------------------------------
-	if listenAndWait(arduinoSer, "READY", 10, 5) != True:
-		raise IOError("Timeout: Arduino not ready for test")					#raise exception if "READY" not received after 10s
-
-	print "Arduino ready for test" #debug
-	angleList = []
-	loadList = []
-	
-	#--------------------------------------------------
-	#WAIT FOR TEST BEGIN SIGNAL AND GET TEST IDENTIFIER
-	#--------------------------------------------------
-	if listenAndWait(arduinoSer, "BEGIN", 300, 5) !=  True:						#listen for test begin signal and require new handshake if test not started within 5 mins
-		 continue
-	idLine = arduinoSer.readline()												#read in line containing test ID number
-	if idLine[0:7] != "TESTID=":
-		raise IOError("Invalid test ID line received")
-	else:
-		testId = int(idLine[7:len(idLine)])
-	print "test " + str(testId) + " started" #debug
-
-	#---------------------------
-	#SAVE TEST DATA TO VARIABLES
-	#---------------------------
-	lineReceived = arduinoSer.readline()										#read in first line of test data
-	while lineReceived[0:3] != "END":
+def data_gen():
+	i = 0;
+	while i < 10000:
+		#---------------------------
+		#SAVE TEST DATA TO VARIABLES
+		#---------------------------
+		lineReceived = arduinoSer.readline()									#read in first line of test data
 		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
-		angleList.append(int(angleReading))										#append load and angle readings to lists
-		loadList.append(int(loadReading))
 		lineReceived = arduinoSer.readline()									#read in next line of test data
-	idLine = arduinoSer.readline()												#read in line following test end signal to get testID
-	if idLine[0:7] != "TESTID=":
-		raise IOError("Invalid test ID line received")
-	elif int(idLine[7:len(idLine)]) != testId:									#check if same test ID received at beginning and end of test
-		raise IOError("Different test ID supplied at beginning and end of test")
-	print "test " + str(testId) + " ended" #debug
+		yield angleReading, loadReading
 
-	#-----------------------------------------------------------------------------
-	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP
-	#-----------------------------------------------------------------------------
-	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (blocking until some signal is received)
-	print lineReceived
-	if lineReceived[0:6] == "ACCEPT":
-		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
-		filename = dirPath + datePrefix + "/test" + str(lastTestID + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
-		fileObj = open(filename,"w")											#open file to write
-		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
-		fileObj.close()															#close file
-	elif lineReceived[0:6] == "REJECT":
-		continue
-	else:
-		raise IOError("Invalid accept/reject instruction received")
+fig, ax = plt.subplots()
+line, = ax.plot([], [], lw=2)
+ax.set_ylim(-1, 1)
+ax.set_xlim(-1, 1)
+ax.grid()
+xdata, ydata = [], []
+def run(data):
+    # update the data
+    angle,load = data
+    xdata.append(angle)
+    ydata.append(load)
+    xmin, xmax = ax.get_xlim()
+	ymin, ymax = ax.get_ylim()
+
+    if load >= xmax:
+        ax.set_xlim(xmin, 2*xmax)
+        ax.figure.canvas.draw()
+	if angle >= ymax:
+		ax.set_ylim(ymin, 2*ymax)
+		ax.figure.canvas.draw()
+    line.set_data(xdata, ydata)
+
+    return line,
+
+ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=10,
+    repeat=False)
+plt.show()
 
