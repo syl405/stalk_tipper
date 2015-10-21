@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <SPI.h>
 #include <Adafruit_ADS1015.h>
 #include <SoftwareSerial.h>
 
@@ -19,6 +20,8 @@ const int testStartStopButtonPin = 2;
 const int encoderButtonPin = 5;
 const int encoderGreenLedPin = 6;
 const int encoderRedLedPin = 7;
+const int digitalPotCSPin = 12;
+byte digitalPotAddress = 0x00;
 
 //16-bit variables for ADC outputs (force to 16-bits, equivalent to normal integer declaration on 16-bit boards)
 int16_t loadCellVal = 0;
@@ -33,6 +36,7 @@ unsigned int testId = -1;
 void setup() {
   Serial.begin(115200); //initialise hardware serial port
   ads1115.begin(); //initialise ADS object
+  //ads1115.setGain(GAIN_FOUR);
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
   pinMode(testStartStopButtonPin, INPUT);
@@ -48,6 +52,12 @@ void setup() {
   digitalWrite(encoderGreenLedPin, HIGH);
   digitalWrite(encoderRedLedPin, HIGH);
 
+  pinMode (digitalPotCSPin, OUTPUT);
+  SPI.begin();
+  digitalWrite(digitalPotCSPin, LOW);
+  SPI.transfer(digitalPotAddress);
+  SPI.transfer(120);
+  digitalWrite(digitalPotCSPin, HIGH);
   
 }
 
@@ -238,3 +248,4 @@ int8_t read_encoder()
   old_AB |= ( ENC_PORT & 0x03 );  //add current state
   return ( enc_states[( old_AB & 0x0f )]);
 }
+
