@@ -57,7 +57,7 @@ print "Serial comms established"
 #=============================================
 dirPath = "test_data"															#literal specifying location for all test data
 datePrefix = time.strftime("%d%m%y")											#get system date as a string
-lastTestID = 0																	#highest test ID amongst existing test files
+lastTestId = 0																	#highest test ID amongst existing test files
 if os.path.exists(dirPath + datePrefix) != True:								#check if directory for today already exists
 	os.makedirs(dirPath + datePrefix)											#make directory
 	print "Making new directory for today's test files"							#debug
@@ -65,8 +65,8 @@ elif os.path.isdir(dirPath + datePrefix):										#if directory already exists 
 	testFileList = os.listdir(dirPath + datePrefix)								#list all elements in the existing directory
 	for file in testFileList:
 		if file[len(file)-4:len(file)] == "test":								#check if file is a test data file
-			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
-				lastTestID = int(file[4:8])										#make current testID last greatest ID
+			if int(file[4:8]) > lastTestId:										#check if current testID is greater than last greatest ID
+				lastTestId = int(file[4:8])										#make current testID last greatest ID
 	lastTestID += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
 	print "Continuing from previous test files"									#debug
 
@@ -138,7 +138,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	print lineReceived
 	if lineReceived[0:6] == "ACCEPT":
 		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
-		filename = dirPath + datePrefix + "/test" + str(lastTestID + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
+		filename = dirPath + datePrefix + "/test" + str(lastTestId + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
 		fileObj.close()															#close file
