@@ -142,7 +142,10 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
 		fileObj.close()															#close file
+		plt.close()		
+		continue
 	elif lineReceived[0:6] == "REJECT":
+		plt.close()
 		continue
 	else:
 		raise IOError("Invalid accept/reject instruction received")
