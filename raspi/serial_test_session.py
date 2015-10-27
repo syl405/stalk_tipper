@@ -117,14 +117,18 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	lineReceived = arduinoSer.readline()										#read in first line of test data
 	plt.ion()
 	drawnow(makeFig)															#create live plotting window
+	plotCounter = 0																#incrementing counter variable to update plot
 	while lineReceived[0:3] != "END":
 		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
 		angleList.append(int(angleReading))										#append load and angle readings to lists
 		loadList.append(int(loadReading))
-		drawnow(makeFig)
+		if plotCounter == 5:													#update plot every 5 points
+			drawnow(makeFig)
+			plotCounter = -1													#reset plotCounter
 		plt.pause(0.000001)
 		lineReceived = arduinoSer.readline()									#read in next line of test data
+		plotCounter += 1														#increment plotCounter
 	idLine = arduinoSer.readline()												#read in line following test end signal to get testID
 	if idLine[0:7] != "TESTID=":
 		raise IOError("Invalid test ID line received")
