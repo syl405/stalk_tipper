@@ -67,7 +67,7 @@ elif os.path.isdir(dirPath + datePrefix):										#if directory already exists 
 		if file[len(file)-4:len(file)] == "test":								#check if file is a test data file
 			if int(file[4:8]) > lastTestId:										#check if current testID is greater than last greatest ID
 				lastTestId = int(file[4:8])										#make current testID last greatest ID
-	lastTestID += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
+	lastTestId += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
 	print "Continuing from previous test files"									#debug
 
 
