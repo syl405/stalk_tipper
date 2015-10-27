@@ -2,6 +2,20 @@ import serial
 import time
 import os
 import json
+import numpy  # Import numpy
+import matplotlib.pyplot as plt #import matplotlib library
+from drawnow import *
+
+def makeFig(xData, yData): #Create a function that makes our desired plot
+#*******************************************************************************
+#Live plotting function borrowed from example at http://www.toptechboy.com/tutorial/python-with-arduino-lesson-11-plotting-and-graphing-live-data-from-arduino-with-matplotlib/
+#*******************************************************************************
+    plt.ylim(0,32767)                                 							#Set axes limits for load
+    plt.title('My Live Streaming Sensor Data')      							#Plot the title
+    plt.grid(True)                                  							#Turn the grid on
+    plt.ylabel('Load')                            								#Set ylabels
+    plt.plot(xData, yData, 'ro')       											#plot the load-deflection data
+    plt.ticklabel_format(useOffset=True)          								#Force matplotlib to NOT autoscale y axis
 
 def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
 #*******************************************************************************
