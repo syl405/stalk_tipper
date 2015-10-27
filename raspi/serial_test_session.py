@@ -116,6 +116,8 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#---------------------------
 	lineReceived = arduinoSer.readline()										#read in first line of test data
 	plt.ion()
+	drawnow(makeFig)															#create live plotting window
+	time.sleep(0.01)															#pause for plotting window to be open
 	while lineReceived[0:3] != "END":
 		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
