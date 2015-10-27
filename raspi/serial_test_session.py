@@ -64,7 +64,7 @@ if os.path.exists(dirPath + datePrefix) != True:								#check if directory for 
 elif os.path.isdir(dirPath + datePrefix):										#if directory already exists continue test numbering from last time
 	testFileList = os.listdir(dirPath + datePrefix)								#list all elements in the existing directory
 	for file in testFileList:
-		if file[len(file)-4:len(file)] == test:									#check if file is a test data file
+		if file[len(file)-4:len(file)] == "test":								#check if file is a test data file
 			if int(file[4:8]) > lastTestID:										#check if current testID is greater than last greatest ID
 				lastTestID = int(file[4:8])										#make current testID last greatest ID
 	lastTestID += 1																#Arduino numbers tests from 0, so increment by 1 to prevent overwriting previous test
@@ -109,7 +109,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		raise IOError("Invalid test ID line received")
 	else:
 		testId = int(idLine[7:len(idLine)])
-	print "test " + str(testId) + " started" #debug
+	print "test " + str(lastTestId + testId) + " started" #debug
 
 	#---------------------------
 	#SAVE TEST DATA TO VARIABLES
@@ -129,7 +129,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		raise IOError("Invalid test ID line received")
 	elif int(idLine[7:len(idLine)]) != testId:									#check if same test ID received at beginning and end of test
 		raise IOError("Different test ID supplied at beginning and end of test")
-	print "test " + str(testId) + " ended" #debug
+	print "test " + str(lastTestId + testId) + " ended" #debug
 
 	#-----------------------------------------------------------------------------
 	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP
