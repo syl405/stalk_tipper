@@ -49,6 +49,8 @@ def data_gen():
 		lineReceived = arduinoSer.readline()									#read in first line of test data
 		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
+		angleReading = float(angleReading)
+		loadReading = float(loadReading)
 		lineReceived = arduinoSer.readline()									#read in next line of test data
 		yield angleReading, loadReading
 
@@ -58,25 +60,32 @@ ax.set_ylim(-1, 1)
 ax.set_xlim(-1, 1)
 ax.grid()
 xdata, ydata = [], []
+
 def run(data):
-    # update the data
-    angle,load = data
-    xdata.append(angle)
-    ydata.append(load)
-    xmin, xmax = ax.get_xlim()
+	# update the data
+	angle,load = data
+	xdata.append(angle)
+	ydata.append(load)
+	xmin, xmax = ax.get_xlim()
 	ymin, ymax = ax.get_ylim()
 
-    if load >= xmax:
-        ax.set_xlim(xmin, 2*xmax)
-        ax.figure.canvas.draw()
-	if angle >= ymax:
-		ax.set_ylim(ymin, 2*ymax)
+	if angle >= xmax:
+		ax.set_xlim(xmin, xmax+10)
 		ax.figure.canvas.draw()
-    line.set_data(xdata, ydata)
+	elif angle <= xmin:
+		ax.set_xlim(xmin-10, xmax)
+		ax.figure.canvas.draw()
+	if load >= ymax:
+		ax.set_ylim(ymin, ymax+10)
+		ax.figure.canvas.draw()
+	elif load <= ymin:
+		ax.set_ylim(ymin-10, ymax)
+		ax.figure.canvas.draw()
 
-    return line,
+	line.set_data(xdata, ydata)
 
-ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=10,
+	return line,
+
+ani = animation.FuncAnimation(fig, run, data_gen, blit=False, interval=10,
     repeat=False)
 plt.show()
-
