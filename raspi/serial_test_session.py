@@ -6,7 +6,7 @@ import numpy  # Import numpy
 import matplotlib.pyplot as plt #import matplotlib library
 from drawnow import *
 
-def makeFig(xData, yData): #Create a function that makes our desired plot
+def makeFig(): #Create a function that makes our desired plot
 #*******************************************************************************
 #Live plotting function borrowed from example at http://www.toptechboy.com/tutorial/python-with-arduino-lesson-11-plotting-and-graphing-live-data-from-arduino-with-matplotlib/
 #*******************************************************************************
@@ -14,7 +14,7 @@ def makeFig(xData, yData): #Create a function that makes our desired plot
     plt.title('My Live Streaming Sensor Data')      							#Plot the title
     plt.grid(True)                                  							#Turn the grid on
     plt.ylabel('Load')                            								#Set ylabels
-    plt.plot(xData, yData, 'ro')       											#plot the load-deflection data
+    plt.plot(angleList, loadList, 'ro')       											#plot the load-deflection data
     plt.ticklabel_format(useOffset=True)          								#Force matplotlib to NOT autoscale y axis
 
 def listenAndWait(serObj, keyword, timeOut, n_compare=-1):
@@ -89,7 +89,6 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	arduinoSer.write("READY")
 	print "READY SIGNAL SENT" #debug
 
-	
 	#----------------------------------------------------------------------
 	#CHECK THAT ARDUINO IS READY FOR TEST AND INITIALISE TEST DATA VARIABLE
 	#----------------------------------------------------------------------
@@ -116,11 +115,14 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#SAVE TEST DATA TO VARIABLES
 	#---------------------------
 	lineReceived = arduinoSer.readline()										#read in first line of test data
+	plt.ion()
 	while lineReceived[0:3] != "END":
 		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
 		angleList.append(int(angleReading))										#append load and angle readings to lists
 		loadList.append(int(loadReading))
+		drawnow(makeFig)
+		plt.pause(0.000001)
 		lineReceived = arduinoSer.readline()									#read in next line of test data
 	idLine = arduinoSer.readline()												#read in line following test end signal to get testID
 	if idLine[0:7] != "TESTID=":
