@@ -183,18 +183,6 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
       accepted = curSelection;
     }
     lastPushbuttonState = pushbuttonState;
-    //acceptState = digitalRead(acceptPin);
-    //rejectState = digitalRead(rejectPin);
-    //NOTE: this if...else block means that data will be accepted if both buttons are depressed at the same time
-    //TO-DO: come up with alternative structure that does not make this arbitrary (albeit conservative) assumption and instead ignores simultaneous presses
-    //if (acceptState != lastAcceptState && acceptState == HIGH) { //if accept button is newly depressed
-      //accepted = 1;
-    //}
-    //else if (rejectState != lastRejectState && rejectState == HIGH) { //if reject button is newly depressed
-      //accepted = -1;
-    //}
-    //lastAcceptState = acceptState;
-    //lastRejectState = rejectState;
   }
   
   if (accepted == 1) {
