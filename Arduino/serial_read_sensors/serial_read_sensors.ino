@@ -36,7 +36,6 @@ unsigned int testId = -1;
 void setup() {
   Serial.begin(115200); //initialise hardware serial port
   ads1115.begin(); //initialise ADS object
-  ads1115.setGain(GAIN_ONE);
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
   pinMode(testStartStopButtonPin, INPUT);
