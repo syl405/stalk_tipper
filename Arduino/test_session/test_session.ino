@@ -1,5 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
+#include "Adafruit_LEDBackpack.h"
+#include "Adafruit_GFX.h"
 
 //define pins and ports for rotary encoder
 #define ENC_A 14
@@ -7,8 +9,8 @@
 #define ENC_PORT PINC
 
 
-Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
-
+Adafruit_ADS1115 ads1115; //instantiate ADS object using default address 0x48
+Adafruit_7segment sevenSeg = Adafruit_7segment(); // instantiate 7 segment display object
 
 //constants to set pin numbers
 const int readyLedPin = 4;
@@ -26,11 +28,16 @@ int16_t potVal = 0;
 boolean testUnderway = false;
 int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
-unsigned int testId = -1;
+int testId = -1;
+unsigned int height = 0; //height of force applicator above ground in mm
+volatile int lastEncoded = 0;
 
 void setup() {
   Serial.begin(115200); //initialise hardware serial port
-  ads1115.begin(); //initialise ADS object
+  ads1115.begin(); //initialise ADS object at 0x48
+  sevenSeg.begin(0x70); //initialise 7 segment display object at 0x70
+  sevenSeg.println(height);
+  sevenSeg.writeDisplay();
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
   pinMode(testStartStopButtonPin, INPUT);
@@ -62,6 +69,10 @@ void loop() {
     if (testStartStopButtonState == HIGH) { //if button is newly depressed
       //Serial.println("button state changed");
       if (testUnderway == false) { //if no test was underway
+        if (height ==  0) { //check if test height is set
+          setHeight(encoderButtonPin); //call function to set height
+        }
+        confirmHeight(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin); //prompt user to confirm currently set height value
         testUnderway = true; //start test
         digitalWrite(testStatusLedPin, HIGH); //turn on test status LED
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
@@ -224,6 +235,111 @@ void rejectData() {
   //testing
   testId --; //decrement by 1 since last test rejected
   waitForRasPi();
+}
+
+void setHeight(int pushbuttonPin) {
+  boolean heightSet = false;
+  unsigned int tempHeight;
+  if (height == 0) {
+    tempHeight = 1500;
+  }
+  else {
+    tempHeight = height;
+  }
+  int pushbuttonState = digitalRead(pushbuttonPin); //state of encoder pushbutton
+  int lastPushbuttonState = pushbuttonState;
+  int8_t tmpdata; //8-bit data for to store encoder state
+  int encoderRotationCounter = 0;
+  int8_t lastTmpdata;
+  sevenSeg.blinkRate(1); //blink height display while setting in progress
+  
+  while (heightSet == false) { //loop while user selects height
+    sevenSeg.println(tempHeight);
+    sevenSeg.writeDisplay();
+    tmpdata = read_encoder(); //listen for rotation on encoder
+    Serial.println(tmpdata);
+    if (tmpdata > 0 && (tmpdata*lastTmpdata) >= 0) {
+      encoderRotationCounter++;
+    }
+    else if (tmpdata < 0 && (tmpdata*lastTmpdata) >= 0) {
+      encoderRotationCounter--;
+    }
+    lastTmpdata = tmpdata;
+    if (encoderRotationCounter >= 3) {
+      tempHeight = tempHeight + 1;
+      sevenSeg.println(tempHeight); //update display immediately
+      sevenSeg.writeDisplay();
+      encoderRotationCounter = 0; //reset counter
+    }
+    else if (encoderRotationCounter <= -3) {
+      tempHeight = tempHeight - 1;
+      sevenSeg.println(tempHeight); //update display immediately
+      sevenSeg.writeDisplay();
+      encoderRotationCounter = 0; //reset counter
+    }
+
+    pushbuttonState = digitalRead(pushbuttonPin); //read encoder pushbutton
+    if (pushbuttonState != lastPushbuttonState && pushbuttonState == HIGH) { //if confirm button is newly depressed
+      height = tempHeight; //save currently selected height
+      sevenSeg.println(height); //update display again to make sure correct height is reflected
+      sevenSeg.writeDisplay();
+      sevenSeg.blinkRate(0); //set height display to not blink
+      heightSet = true; //toggle heightSet to true to exit on next loop iteration
+    }
+
+    lastPushbuttonState = pushbuttonState;
+  }
+}
+
+void confirmHeight(int pushbuttonPin, int acceptLedPin, int rejectLedPin) {
+  int heightConfirmed = 0;
+  int pushbuttonState = digitalRead(pushbuttonPin); //state of encoder pushbutton
+  int lastPushbuttonState =pushbuttonState;
+  int8_t tmpdata; //8-bit int to store encoder state
+  int curSelection = 0; //current encoder focus state (accept or reject)
+  
+  sevenSeg.println(height); //update display to reflect currently set height
+  sevenSeg.writeDisplay();
+  
+  while (heightConfirmed == 0) {
+    int8_t tmpdata;
+    /**/
+    tmpdata = read_encoder();
+    
+    if (tmpdata) {
+      if (tmpdata > 0) {
+        curSelection = 1;
+      }
+      else{
+        curSelection = -1;
+      }
+    }
+    
+    //LED output values reversed due to common anode LED design on encoder
+    if (curSelection == 1) {
+      digitalWrite(acceptLedPin, LOW);
+      digitalWrite(rejectLedPin, HIGH);
+    }
+    else {
+      digitalWrite(acceptLedPin, HIGH);
+      digitalWrite(rejectLedPin, LOW);
+    }
+    
+    pushbuttonState = digitalRead(pushbuttonPin);
+    if (pushbuttonState != lastPushbuttonState && pushbuttonState == HIGH) { //if confirm button is newly depressed
+      heightConfirmed = curSelection;
+    }
+    
+    lastPushbuttonState = pushbuttonState;
+  }
+
+  //turn both LEDs off
+  digitalWrite(acceptLedPin, HIGH);
+  digitalWrite(rejectLedPin, HIGH);
+
+  if (heightConfirmed < 0) { //if user rejects currently set height value
+    setHeight(pushbuttonPin); //prompt user to set new height value    
+  }
 }
 
 void flushMainIncoming() {
