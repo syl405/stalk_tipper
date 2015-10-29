@@ -1,7 +1,7 @@
 #define ROBOT_NAME "TESTFRAME1"
 
 // If you haven't configured your device before use this
-#define BLUETOOTH_SPEED 9600
+#define BLUETOOTH_SPEED 19200
 // If you are modifying your existing configuration, use this:
 // #define BLUETOOTH_SPEED 57600
 
@@ -58,7 +58,7 @@ void setup()
   waitForResponse();
 
   // Set baudrate to 115200
-  mySerial.print("AT+BAUD7");
+  mySerial.print("AT+BAUD5");
   waitForResponse();
 
   Serial.println("Done!");
