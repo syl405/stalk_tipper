@@ -37,7 +37,7 @@ unsigned int height = 0; //height of force applicator above ground in mm
 volatile int lastEncoded = 0;
 
 void setup() {
-  blueSerial.begin(57600); //initialise hardware serial port
+  blueSerial.begin(19200); //initialise hardware serial port
   ads1115.begin(); //initialise ADS object at 0x48
   sevenSeg.begin(0x70); //initialise 7 segment display object at 0x70
   sevenSeg.println(height);
