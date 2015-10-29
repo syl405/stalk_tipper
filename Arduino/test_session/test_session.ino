@@ -22,6 +22,11 @@ const int encoderButtonPin = 5;
 const int encoderGreenLedPin = 6;
 const int encoderRedLedPin = 7;
 
+//constants to set preload and termination criterion
+const int preload = 240; //magnitude change in ADC code corresponding to 2N preload (120 codes per N)
+const float dropTerm = 0.3; //percentage change from max load to terminate test at
+
+
 //16-bit variables for ADC outputs (force to 16-bits, equivalent to normal integer declaration on 16-bit boards)
 int16_t loadCellVal = 0;
 int16_t potVal = 0;
@@ -34,7 +39,7 @@ int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
 int testId = -1;
 unsigned int height = 0; //height of force applicator above ground in mm
-volatile int lastEncoded = 0;
+int maxLoad; //ADC code corresponding to max load seen in current test
 
 void setup() {
   blueSerial.begin(19200); //initialise hardware serial port
@@ -136,12 +141,39 @@ void loop() {
   if (testUnderway == true) {
     loadCellVal = ads1115.readADC_Differential_0_1(); //differential signal between channels 0 and 1
     potVal = ads1115.readADC_Differential_2_3(); //differential signal between channels 2 and 3
+
+    //=====================================================
+    //CHECK WHETHER PRELOAD ATTAINED AND START SENDING DATA
+    //=====================================================
     if (preloadAttained) { //if preload already attained, just send data
       sendData();
     }
     else if (loadCellVal > zeroCode + 240) { //if preload not previously attained, check if new point attains preload
       preloadAttained = true; //start sending data once preload attained
       sendData(); //send first data point
+    }
+
+    //==================================================
+    //UPDATE MAX LOAD AND CHECK FOR TERMINATION CRITERIA
+    //==================================================
+    if (loadCellVal > maxLoad) {
+      maxLoad = loadCellVal; //set current load cell value as new maximum
+    }
+    else if (loadCellVal < (1-dropTerm) * float(maxLoad)) {
+      testUnderway = false; //stop test
+      preloadAttained = false; //reset preload attainment toggle
+      maxLoad = 0; //reset maxLoad variable
+      digitalWrite(testStatusLedPin, LOW); //turn off test status LED
+      blueSerial.println("END"); //keyword to end test
+      blueSerial.print("TESTID=");  //testID on new line
+      blueSerial.println(testId); //unique test identifier
+        
+      if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
+        acceptData();
+      }
+      else {
+        rejectData();
+      }
     }
   }
  
