@@ -1,5 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
+#include "Adafruit_LEDBackpack.h"
+#include "Adafruit_GFX.h"
 #include <SoftwareSerial.h>
 
 //define pins and ports for rotary encoder
@@ -8,9 +10,9 @@
 #define ENC_PORT PINC
 
 
-Adafruit_ADS1115 ads1115; //instantiate ADS bject using default address 0x48
-SoftwareSerial blueSerial(10,11); //instantiate software serial port
-
+Adafruit_ADS1115 ads1115; //instantiate ADS object using default address 0x48
+Adafruit_7segment sevenSeg = Adafruit_7segment(); // instantiate 7 segment display object
+SoftwareSerial blueSerial(9,10); //instantiate software serial port for bluetooth module
 
 //constants to set pin numbers
 const int readyLedPin = 4;
@@ -26,14 +28,20 @@ int16_t potVal = 0;
 
 //general variables
 boolean testUnderway = false;
+boolean preloadAttained = false;
+int zeroCode;
 int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
-unsigned int testId = -1;
+int testId = -1;
+unsigned int height = 0; //height of force applicator above ground in mm
+volatile int lastEncoded = 0;
 
 void setup() {
-  Serial.begin(115200); //initialise hardware serial port
-  blueSerial.begin(9600); //initialise software serial port
-  ads1115.begin(); //initialise ADS object
+  blueSerial.begin(57600); //initialise hardware serial port
+  ads1115.begin(); //initialise ADS object at 0x48
+  sevenSeg.begin(0x70); //initialise 7 segment display object at 0x70
+  sevenSeg.println(height);
+  sevenSeg.writeDisplay();
   pinMode(readyLedPin, OUTPUT);
   pinMode(testStatusLedPin, OUTPUT);
   pinMode(testStartStopButtonPin, INPUT);
@@ -63,27 +71,52 @@ void loop() {
   testStartStopButtonState = digitalRead(testStartStopButtonPin); //read button state
   if (testStartStopButtonState != lastTestStartStopButtonState) { //check if button state has changed
     if (testStartStopButtonState == HIGH) { //if button is newly depressed
-      //Serial.println("button state changed");
       if (testUnderway == false) { //if no test was underway
+        //=================
+        //PRE-TEST SEQUENCE
+        //=================
+        
+        //=====================
+        //SET OR CONFIRM HEIGHT
+        //=====================
+        if (height ==  0) { //check if test height is set
+          setHeight(encoderButtonPin); //call function to set height
+        }
+        confirmHeight(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin); //prompt user to confirm currently set height value
+
+        //==============
+        //ZERO LOAD CELL
+        //==============
+        long int codeSum = 0; //sum of read ADC codes 
+        long int lastReadTime = millis();
+        for (int i = 0; i < 100; i++) {
+          long int curTime = millis();
+          while (curTime - lastReadTime < 10) {
+            curTime = millis(); //update current time
+          }
+          lastReadTime = curTime; //reset timer to read next value
+          codeSum = codeSum + ads1115.readADC_Differential_0_1(); //read ADC code for zero load
+        }
+        zeroCode = codeSum / 100; //calculate average for zero baseline
+        preloadAttained = false; //boolean variable for whether preload of 2N reached
         testUnderway = true; //start test
         digitalWrite(testStatusLedPin, HIGH); //turn on test status LED
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
         testId ++; //increment testId
-//        Serial.println("BEGIN"); //keyword to start test
+        
         blueSerial.println("BEGIN");
-//        Serial.print("TESTID="); //testID on new line
         blueSerial.print("TESTID=");
-//        Serial.println(testId); //unique test identifier
         blueSerial.println(testId);
+        blueSerial.print("NOLOAD="); //no-load ADC code on new line
+        blueSerial.println(zeroCode); //ADC code for "zero" load condition
+
       }
       else { //if test was underway
         testUnderway = false; //stop test
+        preloadAttained = false; //reset preload attainment toggle
         digitalWrite(testStatusLedPin, LOW); //turn off test status LED
-//        Serial.println("END"); //keyword to end test
         blueSerial.println("END");
-//        Serial.print("TESTID=");  //testID on new line
         blueSerial.print("TESTID=");
-//        Serial.println(testId); //unique test identifier
         blueSerial.println(testId);
         
         if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
@@ -103,7 +136,13 @@ void loop() {
   if (testUnderway == true) {
     loadCellVal = ads1115.readADC_Differential_0_1(); //differential signal between channels 0 and 1
     potVal = ads1115.readADC_Differential_2_3(); //differential signal between channels 2 and 3
-    sendData();
+    if (preloadAttained) { //if preload already attained, just send data
+      sendData();
+    }
+    else if (loadCellVal > zeroCode + 240) { //if preload not previously attained, check if new point attains preload
+      preloadAttained = true; //start sending data once preload attained
+      sendData(); //send first data point
+    }
   }
  
  
@@ -115,51 +154,38 @@ void loop() {
  //Serial.print(" ,buttonState=");
  //Serial.println(testStartStopButtonState);
  
-  delay(100); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
+  delay(5); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
 }
 
 
 void waitForRasPi() {
   
-  //String raspiStringReceived = ""; //line received from RasPi
+
   String blueStringReceived = ""; //line received from tablet
-  //boolean raspiReady = false;
   boolean btReady = false;
   long int waitStartTime = millis(); //save starting time of the loop
   
-  //flushMainIncoming(); //flush main serial port in
   flushSoftwareIncoming(); //flush software serial port incoming buffer
   
   while (btReady == false) {
     long int curTime = millis(); //time at the start of this loop iteration
     if (curTime - waitStartTime > 1000) {
-      //Serial.println("WAITING"); //listen for signal on every iteration but only send waiting signal every half-second
       blueSerial.println("WAITING");
       waitStartTime = curTime; //reset timer
     }
-    //if (Serial.available() > 0) { //if data is available in the serial buffer
-      //raspiStringReceived += char(Serial.read()); //read next byte from buffer and append to string
-    //}
     if (blueSerial.available() > 0) { //if data is available in the software serial buffer
       blueStringReceived += char(blueSerial.read()); //read next byte from bluetooth buffer and append to string
     }
-    //if (raspiStringReceived.endsWith("READY")) { //check whether full "READY" signal received from RasPi
-      //raspiReady = true;
-    //}
     if (blueStringReceived.endsWith("READY")) { //check whether full "READY" signal received from bluetooth device
       btReady = true;
     }
-    //TO-DO: Add error handling for cases when RasPi is not sending correct signal, either based on stringReceived.length() or on a timer 
   }
-  //Serial.println("READY"); //return "READY" signal to RasPi
+
   blueSerial.println("READY");
   digitalWrite(readyLedPin, HIGH); //turn on READY status LED
 }
 
 void sendData() { //writes load and angle data to serial output, separated by comma
-  //Serial.print(loadCellVal);
-  //Serial.print(",");
-  //Serial.println(potVal);
   blueSerial.print(loadCellVal);
   blueSerial.print(",");
   blueSerial.println(potVal);
@@ -206,18 +232,6 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
       accepted = curSelection;
     }
     lastPushbuttonState = pushbuttonState;
-    //acceptState = digitalRead(acceptPin);
-    //rejectState = digitalRead(rejectPin);
-    //NOTE: this if...else block means that data will be accepted if both buttons are depressed at the same time
-    //TO-DO: come up with alternative structure that does not make this arbitrary (albeit conservative) assumption and instead ignores simultaneous presses
-    //if (acceptState != lastAcceptState && acceptState == HIGH) { //if accept button is newly depressed
-      //accepted = 1;
-    //}
-    //else if (rejectState != lastRejectState && rejectState == HIGH) { //if reject button is newly depressed
-      //accepted = -1;
-    //}
-    //lastAcceptState = acceptState;
-    //lastRejectState = rejectState;
   }
   
   if (accepted == 1) {
@@ -235,7 +249,6 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
 }
 
 void acceptData() {
-  //Serial.println("ACCEPT");
   blueSerial.println("ACCEPT");
   //testing - blink test status led 3 times
   for (int i = 0; i < 3; i++) {
@@ -249,7 +262,7 @@ void acceptData() {
 }
 
 void rejectData() {
-  //Serial.println("REJECT");
+
   blueSerial.println("REJECT");
   //testing - blink ready status led 3 times
   for (int i = 0; i < 3; i++) {
@@ -263,11 +276,109 @@ void rejectData() {
   waitForRasPi();
 }
 
-//void flushMainIncoming() {
-  //while (Serial.available() > 0) {
-    //Serial.read();
-  //}
-//}
+void setHeight(int pushbuttonPin) {
+  boolean heightSet = false;
+  unsigned int tempHeight;
+  if (height == 0) {
+    tempHeight = 1500;
+  }
+  else {
+    tempHeight = height;
+  }
+  int pushbuttonState = digitalRead(pushbuttonPin); //state of encoder pushbutton
+  int lastPushbuttonState = pushbuttonState;
+  int8_t tmpdata; //8-bit data for to store encoder state
+  int encoderRotationCounter = 0;
+  int8_t lastTmpdata;
+  sevenSeg.blinkRate(1); //blink height display while setting in progress
+  
+  while (heightSet == false) { //loop while user selects height
+    sevenSeg.println(tempHeight);
+    sevenSeg.writeDisplay();
+    tmpdata = read_encoder(); //listen for rotation on encoder
+    if (tmpdata > 0 && (tmpdata*lastTmpdata) >= 0) {
+      encoderRotationCounter++;
+    }
+    else if (tmpdata < 0 && (tmpdata*lastTmpdata) >= 0) {
+      encoderRotationCounter--;
+    }
+    lastTmpdata = tmpdata;
+    if (encoderRotationCounter >= 3) {
+      tempHeight = tempHeight + 1;
+      sevenSeg.println(tempHeight); //update display immediately
+      sevenSeg.writeDisplay();
+      encoderRotationCounter = 0; //reset counter
+    }
+    else if (encoderRotationCounter <= -3) {
+      tempHeight = tempHeight - 1;
+      sevenSeg.println(tempHeight); //update display immediately
+      sevenSeg.writeDisplay();
+      encoderRotationCounter = 0; //reset counter
+    }
+
+    pushbuttonState = digitalRead(pushbuttonPin); //read encoder pushbutton
+    if (pushbuttonState != lastPushbuttonState && pushbuttonState == HIGH) { //if confirm button is newly depressed
+      height = tempHeight; //save currently selected height
+      sevenSeg.println(height); //update display again to make sure correct height is reflected
+      sevenSeg.writeDisplay();
+      sevenSeg.blinkRate(0); //set height display to not blink
+      heightSet = true; //toggle heightSet to true to exit on next loop iteration
+    }
+
+    lastPushbuttonState = pushbuttonState;
+  }
+}
+
+void confirmHeight(int pushbuttonPin, int acceptLedPin, int rejectLedPin) {
+  int heightConfirmed = 0;
+  int pushbuttonState = digitalRead(pushbuttonPin); //state of encoder pushbutton
+  int lastPushbuttonState =pushbuttonState;
+  int8_t tmpdata; //8-bit int to store encoder state
+  int curSelection = 0; //current encoder focus state (accept or reject)
+  
+  sevenSeg.println(height); //update display to reflect currently set height
+  sevenSeg.writeDisplay();
+  
+  while (heightConfirmed == 0) {
+    int8_t tmpdata;
+    /**/
+    tmpdata = read_encoder();
+    
+    if (tmpdata) {
+      if (tmpdata > 0) {
+        curSelection = 1;
+      }
+      else{
+        curSelection = -1;
+      }
+    }
+    
+    //LED output values reversed due to common anode LED design on encoder
+    if (curSelection == 1) {
+      digitalWrite(acceptLedPin, LOW);
+      digitalWrite(rejectLedPin, HIGH);
+    }
+    else {
+      digitalWrite(acceptLedPin, HIGH);
+      digitalWrite(rejectLedPin, LOW);
+    }
+    
+    pushbuttonState = digitalRead(pushbuttonPin);
+    if (pushbuttonState != lastPushbuttonState && pushbuttonState == HIGH) { //if confirm button is newly depressed
+      heightConfirmed = curSelection;
+    }
+    
+    lastPushbuttonState = pushbuttonState;
+  }
+
+  //turn both LEDs off
+  digitalWrite(acceptLedPin, HIGH);
+  digitalWrite(rejectLedPin, HIGH);
+
+  if (heightConfirmed < 0) { //if user rejects currently set height value
+    setHeight(pushbuttonPin); //prompt user to set new height value    
+  }
+}
 
 void flushSoftwareIncoming() {
   while (blueSerial.available() > 0) {
