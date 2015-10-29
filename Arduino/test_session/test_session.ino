@@ -117,7 +117,7 @@ void loop() {
  //Serial.print(" ,buttonState=");
  //Serial.println(testStartStopButtonState);
  
-  delay(100); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
+  delay(50); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
 }
 
 
