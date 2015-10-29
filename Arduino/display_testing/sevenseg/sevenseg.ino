@@ -37,12 +37,12 @@ void setup() {
 #endif
   matrix.begin(0x70);
   matrix.setBrightness(0);
-}
-
-void loop() {
-  // print a floating point 
   matrix.print(12.34);
   matrix.writeDisplay();
   matrix.blinkRate(1);
   delay(5000);
+}
+
+void loop() {
+
 }
