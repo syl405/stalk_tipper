@@ -26,6 +26,8 @@ int16_t potVal = 0;
 
 //general variables
 boolean testUnderway = false;
+boolean preloadAttained = false;
+int zeroCode;
 int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
 int testId = -1;
@@ -67,12 +69,34 @@ void loop() {
   testStartStopButtonState = digitalRead(testStartStopButtonPin); //read button state
   if (testStartStopButtonState != lastTestStartStopButtonState) { //check if button state has changed
     if (testStartStopButtonState == HIGH) { //if button is newly depressed
-      //Serial.println("button state changed");
       if (testUnderway == false) { //if no test was underway
+        //=================
+        //PRE-TEST SEQUENCE
+        //=================
+        
+        //=====================
+        //SET OR CONFIRM HEIGHT
+        //=====================
         if (height ==  0) { //check if test height is set
           setHeight(encoderButtonPin); //call function to set height
         }
         confirmHeight(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin); //prompt user to confirm currently set height value
+
+        //==============
+        //ZERO LOAD CELL
+        //==============
+        long int codeSum = 0; //sum of read ADC codes 
+        long int lastReadTime = millis();
+        for (int i = 0; i < 100; i++) {
+          long int curTime = millis();
+          while (curTime - lastReadTime < 10) {
+            curTime = millis(); //update current time
+          }
+          lastReadTime = curTime; //reset timer to read next value
+          codeSum = codeSum + ads1115.readADC_Differential_0_1(); //read ADC code for zero load
+        }
+        zeroCode = codeSum / 100; //calculate average for zero baseline
+        preloadAttained = false; //boolean variable for whether preload of 2N reached
         testUnderway = true; //start test
         digitalWrite(testStatusLedPin, HIGH); //turn on test status LED
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
@@ -80,9 +104,12 @@ void loop() {
         Serial.println("BEGIN"); //keyword to start test
         Serial.print("TESTID="); //testID on new line
         Serial.println(testId); //unique test identifier
+        Serial.print("NOLOAD="); //no-load ADC code on new line
+        Serial.println(zeroCode); //ADC code for "zero" load condition
       }
       else { //if test was underway
         testUnderway = false; //stop test
+        preloadAttained = false; //reset preload attainment toggle
         digitalWrite(testStatusLedPin, LOW); //turn off test status LED
         Serial.println("END"); //keyword to end test
         Serial.print("TESTID=");  //testID on new line
@@ -105,7 +132,13 @@ void loop() {
   if (testUnderway == true) {
     loadCellVal = ads1115.readADC_Differential_0_1(); //differential signal between channels 0 and 1
     potVal = ads1115.readADC_Differential_2_3(); //differential signal between channels 2 and 3
-    sendData();
+    if (preloadAttained) { //if preload already attained, just send data
+      sendData();
+    }
+    else if (loadCellVal > zeroCode + 240) { //if preload not previously attained, check if new point attains preload
+      preloadAttained = true; //start sending data once preload attained
+      sendData(); //send first data point
+    }
   }
  
  
@@ -117,7 +150,7 @@ void loop() {
  //Serial.print(" ,buttonState=");
  //Serial.println(testStartStopButtonState);
  
-  delay(50); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
+  delay(5); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
 }
 
 
@@ -257,7 +290,6 @@ void setHeight(int pushbuttonPin) {
     sevenSeg.println(tempHeight);
     sevenSeg.writeDisplay();
     tmpdata = read_encoder(); //listen for rotation on encoder
-    Serial.println(tmpdata);
     if (tmpdata > 0 && (tmpdata*lastTmpdata) >= 0) {
       encoderRotationCounter++;
     }
