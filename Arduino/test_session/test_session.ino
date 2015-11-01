@@ -111,6 +111,8 @@ void loop() {
         Serial.println(testId); //unique test identifier
         Serial.print("NOLOAD="); //no-load ADC code on new line
         Serial.println(zeroCode); //ADC code for "zero" load condition
+        Serial.print("HEIGHT="); //force application height on new line
+        Serial.println(height); //current force applicator height
       }
       else { //if test was underway
         testUnderway = false; //stop test
