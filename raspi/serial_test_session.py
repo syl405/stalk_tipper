@@ -126,9 +126,9 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		height = int(heightLine[7:len(heightLine)])
 	print "testing at " + str(height) + " mm above ground." #debug
 
-	#---------------------------
-	#SAVE TEST DATA TO VARIABLES
-	#---------------------------
+	#------------------------------------
+	#SAVE TEST DATA TO VARIABLES AND PLOT
+	#------------------------------------
 	lineReceived = arduinoSer.readline()										#read in first line of test data
 	plt.ion()
 	drawnow(makeFig)															#create live plotting window
@@ -138,7 +138,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
 		angleList.append(int(angleReading))										#append load and angle readings to lists
 		loadList.append(int(loadReading))
-		if plotCounter == 5:													#update plot every 5 points
+		if plotCounter == 25:													#update plot every 25 points (once every 0.5 second)
 			drawnow(makeFig)
 			plotCounter = -1													#reset plotCounter
 		plt.pause(0.000001)
