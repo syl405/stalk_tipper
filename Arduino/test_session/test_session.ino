@@ -158,7 +158,6 @@ void loop() {
       maxLoad = loadCellVal; //set current load cell value as new maximum
     }
     else if (loadCellVal < (1-dropTerm) * float(maxLoad)) {
-      Serial.println("terminated");
       testUnderway = false; //stop test
       preloadAttained = false; //reset preload attainment toggle
       maxLoad = 0; //reset maxLoad variable
