@@ -99,6 +99,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	angleList = []
 	loadList = []
 	
+	
 	#--------------------------------------------------
 	#WAIT FOR TEST BEGIN SIGNAL AND GET TEST IDENTIFIER
 	#--------------------------------------------------
@@ -110,6 +111,20 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	else:
 		testId = int(idLine[7:len(idLine)])
 	print "test " + str(lastTestId + testId) + " started" #debug
+
+	zeroLine = arduinoSer.readline()
+	if zeroLine[0:7] != "NOLOAD=":
+		raise IOError("Invalid zero load line received")
+	else:
+		zeroCode = int(zeroLine[7:len(zeroLine)])
+
+	heightLine = arduinoSer.readline()											#read in line containing force applicator height
+	if heightLine[0:7] != "HEIGHT=":
+		print heightLine #debug
+		raise IOError("Invalid force applicator height received")
+	else:
+		height = int(heightLine[7:len(heightLine)])
+	print "testing at " + str(height) + " mm above ground." #debug
 
 	#---------------------------
 	#SAVE TEST DATA TO VARIABLES
@@ -142,10 +157,10 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (blocking until some signal is received)
 	print lineReceived
 	if lineReceived[0:6] == "ACCEPT":
-		testBivariateData = (loadList, angleList)								#place lists of load and angle into tuple of lists
+		testData = (height, loadList, angleList)								#place height and lists of load and angle into tuple of lists
 		filename = dirPath + datePrefix + "/test" + str(lastTestId + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
 		fileObj = open(filename,"w")											#open file to write
-		json.dump(testBivariateData, fileObj)									#serialize and write bivariate test data to file
+		json.dump(testData, fileObj)											#serialize and write test data to file
 		fileObj.close()															#close file
 		plt.close()		
 		continue
