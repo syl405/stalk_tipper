@@ -157,7 +157,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	lineReceived = arduinoSer.readline()										#read in next line from serial buffer (blocking until some signal is received)
 	print lineReceived
 	if lineReceived[0:6] == "ACCEPT":
-		testData = (height, loadList, angleList)								#place height and lists of load and angle into tuple of lists
+		testData = (zeroCode, height, loadList, angleList)						#place zeroCode, height and lists of load and angle into tuple of lists
 		filename = dirPath + datePrefix + "/test" + str(lastTestId + testId).zfill(4) + ".test"			#formulate constant length filename based on test ID (continue numbering from prev.)
 		fileObj = open(filename,"w")											#open file to write
 		json.dump(testData, fileObj)											#serialize and write test data to file
