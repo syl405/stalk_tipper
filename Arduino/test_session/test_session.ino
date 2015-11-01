@@ -17,8 +17,8 @@ const int readyLedPin = 4;
 const int testStatusLedPin = 3;
 const int testStartStopButtonPin = 2;
 const int encoderButtonPin = 5;
-const int encoderGreenLedPin = 6;
-const int encoderRedLedPin = 7;
+const int encoderGreenLedPin = 11;
+const int encoderRedLedPin = 12;
 
 //constants to set preload and termination criterion
 const int preload = 240; //magnitude change in ADC code corresponding to 2N preload (120 codes per N)
