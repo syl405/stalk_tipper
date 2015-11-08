@@ -165,6 +165,7 @@ void loop() {
       Serial.println("END"); //keyword to end test
       Serial.print("TESTID=");  //testID on new line
       Serial.println(testId); //unique test identifier
+      
         
       if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
         acceptData();
