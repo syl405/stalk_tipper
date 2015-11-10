@@ -3,3 +3,6 @@
 
 #ignore all test files
 **/*test
+
+#ignore all image files
+**/*img
