@@ -31,7 +31,8 @@ int16_t potVal = 0;
 //general variables
 boolean testUnderway = false;
 boolean preloadAttained = false;
-int zeroCode;
+int zeroLoadCode;
+int zeroPotCode;
 int testStartStopButtonState = 0;
 int lastTestStartStopButtonState = 0;
 int testId = -1;
@@ -89,19 +90,17 @@ void loop() {
         //==============
         //ZERO LOAD CELL
         //==============
-        long int codeSum = 0; //sum of read ADC codes 
-        long int lastReadTime = millis();
-        for (int i = 0; i < 100; i++) {
-          long int curTime = millis();
-          while (curTime - lastReadTime < 10) {
-            curTime = millis(); //update current time
-          }
-          lastReadTime = curTime; //reset timer to read next value
-          codeSum = codeSum + ads1115.readADC_Differential_0_1(); //read ADC code for zero load
+        long int loadCodeSum = 0; //sum of read ADC codes for load cell
+        long int potCodeSum = 0; // sum of  read ADC codes for rotary pot
+        for (int i = 0; i < 100; i++) { //read 100 values with 10 ms delay in between reads
+          loadCodeSum = loadCodeSum + ads1115.readADC_Differential_0_1(); //read ADC code for zero load
+          potCodeSum = potCodeSum + ads1115.readADC_Differential_2_3(); //read ADC code for zero rotation
+          delay(10);
         }
-        zeroCode = codeSum / 100; //calculate average for zero baseline
+        zeroLoadCode = loadCodeSum / 100; //calculate average for zero load baseline
+        zeroPotCode = potCodeSum / 100; //calculate average for zero rotation baseline
         preloadAttained = false; //boolean variable for whether preload of 2N reached
-        maxLoad = zeroCode; //set current maxLoad to zero point
+        maxLoad = zeroLoadCode; //set current maxLoad to zero point
         testUnderway = true; //start test
         digitalWrite(testStatusLedPin, HIGH); //turn on test status LED
         digitalWrite(readyLedPin, LOW); //turn off READY status LED
@@ -110,7 +109,9 @@ void loop() {
         Serial.print("TESTID="); //testID on new line
         Serial.println(testId); //unique test identifier
         Serial.print("NOLOAD="); //no-load ADC code on new line
-        Serial.println(zeroCode); //ADC code for "zero" load condition
+        Serial.println(zeroLoadCode); //ADC code for "zero" load condition
+        Serial.print("NOROT="); //no-rotation ADC code on new line
+        Serial.println(zeroPotCode); //ADC code for "vertical" arm position
         Serial.print("HEIGHT="); //force application height on new line
         Serial.println(height); //current force applicator height
       }
@@ -146,7 +147,7 @@ void loop() {
     if (preloadAttained) { //if preload already attained, just send data
       sendData();
     }
-    else if (loadCellVal > zeroCode + 240) { //if preload not previously attained, check if new point attains preload
+    else if (loadCellVal > zeroLoadCode + 240) { //if preload not previously attained, check if new point attains preload, 240 codes per N from calibration
       preloadAttained = true; //start sending data once preload attained
       sendData(); //send first data point
     }
