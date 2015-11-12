@@ -1,10 +1,15 @@
 import serial
+import struct
 import time
 import os
 import json
 import numpy  # Import numpy
 import matplotlib.pyplot as plt #import matplotlib library
 from drawnow import *
+
+def packIntegerAsULong(value):
+    """Packs a python 4 byte unsigned integer to an arduino unsigned long"""
+    return struct.pack('I', value)    #should check bounds
 
 def makeFig(): #Create a function that makes our desired plot
 #*******************************************************************************
@@ -156,6 +161,8 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	elif int(idLine[7:len(idLine)]) != testId:									#check if same test ID received at beginning and end of test
 		raise IOError("Different test ID supplied at beginning and end of test")
 	print "test " + str(lastTestId + testId) + " ended" #debug
+
+	arduinoSer.write("TESTIDONFILE=" + str(lastTestId + testId).zfill(4))				#send final test ID associated with file back to Arduino
 
 	#-----------------------------------------------------------------------------
 	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP

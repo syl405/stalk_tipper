@@ -124,6 +124,9 @@ void loop() {
         Serial.print("TESTID=");  //testID on new line
         Serial.println(testId); //unique test identifier
         
+        //==================================
+        // PROMPT USER TO ACCEPT/REJECT DATA
+        //==================================
         if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
           acceptData();
         }
@@ -166,8 +169,10 @@ void loop() {
       Serial.println("END"); //keyword to end test
       Serial.print("TESTID=");  //testID on new line
       Serial.println(testId); //unique test identifier
-      
-        
+
+      //==================================
+      // PROMPT USER TO ACCEPT/REJECT DATA
+      //==================================
       if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
         acceptData();
       }
@@ -232,6 +237,37 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
   //int rejectState = digitalRead(rejectPin);
   int accepted = 0; //+1 if accepted, -1 if rejected, 0 if not yet indicated
   int curSelection = 1;
+
+  //=============================================
+  // GET FINAL TESTID USED IN FILENAME FROM RASPI
+  //=============================================
+  boolean prefixDetected = false;
+  String incomingStream;
+  while  (prefixDetected == false) {
+    if (Serial.available() > 0) { //if data is available in the serial buffer
+      incomingStream += char(Serial.read()); //read next byte from buffer and append to string
+    }
+    if (incomingStream.endsWith("TESTIDONFILE=")) { //check whether full "READY" signal received from RasPi
+      prefixDetected = true; //break out of loop to read in final test id to follow
+    }
+  }
+
+  char finalTestIdString[5];
+  int finalTestId;
+
+  for(int i = 0; i < 4; i++) {
+    delay(2);
+    finalTestIdString[i] = Serial.read();
+  }
+  finalTestIdString[4] = 0x00;
+  finalTestId = atoi(finalTestIdString);
+  
+  //=====================================================
+  // FLASH TEST ID ON FILE IN RASPI THROUGH 7-SEG DISPLAY
+  //=====================================================
+  sevenSeg.println(finalTestId);
+  sevenSeg.writeDisplay(); //show final test id on file
+  sevenSeg.blinkRate(3); //slow blink
   
   //enter loop to wait for user to press either the accept or reject button
   while (accepted == 0) {
@@ -269,12 +305,26 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
     //turn off selection indicator LEDS
     digitalWrite(acceptLedPin, HIGH);
     digitalWrite(rejectLedPin, HIGH);
+    //===========================================
+    // REVERT 7SEG DISPLAY TO SHOWING TEST HEIGHT
+    //===========================================
+    sevenSeg.println(height);
+    sevenSeg.writeDisplay(); //revert to showing test height
+    sevenSeg.blinkRate(0); //no blink
+    
     return true;
   }
   else if (accepted == -1) {
     //turn off selection indicator LEDS
     digitalWrite(acceptLedPin, HIGH);
     digitalWrite(rejectLedPin, HIGH);
+    //===========================================
+    // REVERT 7SEG DISPLAY TO SHOWING TEST HEIGHT
+    //===========================================
+    sevenSeg.println(height);
+    sevenSeg.writeDisplay(); //revert to showing test height
+    sevenSeg.blinkRate(0); //no blink
+    
     return false;
   }
 }
@@ -425,4 +475,16 @@ int8_t read_encoder()
   old_AB <<= 2;                   //remember previous state
   old_AB |= ( ENC_PORT & 0x03 );  //add current state
   return ( enc_states[( old_AB & 0x0f )]);
+}
+
+unsigned long readULongFromBytes() {
+  union u_tag {
+    byte b[4];
+    unsigned long ulval;
+  } u;
+  u.b[0] = Serial.read();
+  u.b[1] = Serial.read();
+  u.b[2] = Serial.read();
+  u.b[3] = Serial.read();
+  return u.ulval;
 }
