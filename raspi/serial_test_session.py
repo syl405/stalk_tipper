@@ -15,7 +15,7 @@ def makeFig(): #Create a function that makes our desired plot
 #*******************************************************************************
 #Live plotting function borrowed from example at http://www.toptechboy.com/tutorial/python-with-arduino-lesson-11-plotting-and-graphing-live-data-from-arduino-with-matplotlib/
 #*******************************************************************************
-    plt.ylim(0,32767)                                 							#Set axes limits for load
+    #plt.ylim(0,20000)                                 							#Set axes limits for load
     plt.title('My Live Streaming Sensor Data')      							#Plot the title
     plt.grid(True)                                  							#Turn the grid on
     plt.ylabel('Load')                            								#Set ylabels
@@ -141,20 +141,13 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 	#SAVE TEST DATA TO VARIABLES AND PLOT
 	#------------------------------------
 	lineReceived = arduinoSer.readline()										#read in first line of test data
-	plt.ion()
-	drawnow(makeFig)															#create live plotting window
-	plotCounter = 0																#incrementing counter variable to update plot
 	while lineReceived[0:3] != "END":
 		lineReceived = lineReceived.split("/")[0]								#take first element after splitting by forward slash to strip special characters
 		[loadReading, angleReading] = lineReceived.split(",")					#split load cell and potentiometer values using comma
 		angleList.append(int(angleReading))										#append load and angle readings to lists
 		loadList.append(int(loadReading))
-		if plotCounter == 25:													#update plot every 25 points (once every 0.5 second)
-			drawnow(makeFig)
-			plotCounter = -1													#reset plotCounter
-		plt.pause(0.000001)
-		lineReceived = arduinoSer.readline()									#read in next line of test data
-		plotCounter += 1														#increment plotCounter
+	plt.ion()
+	drawnow(makeFig)
 	idLine = arduinoSer.readline()												#read in line following test end signal to get testID
 	if idLine[0:7] != "TESTID=":
 		raise IOError("Invalid test ID line received")
@@ -162,7 +155,7 @@ while True: 																	#master loop, one iteration per initialize>test>wri
 		raise IOError("Different test ID supplied at beginning and end of test")
 	print "test " + str(lastTestId + testId) + " ended" #debug
 
-	arduinoSer.write("TESTIDONFILE=" + str(lastTestId + testId).zfill(4))				#send final test ID associated with file back to Arduino
+	arduinoSer.write("TESTIDONFILE=" + str(lastTestId + testId).zfill(4))		#send final test ID associated with file back to Arduino
 
 	#-----------------------------------------------------------------------------
 	#WAIT FOR USER CONFIRMATION AND WRITE TEST DATA TO FILE OR RETURN TO MAIN LOOP

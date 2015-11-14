@@ -38,6 +38,7 @@ int lastTestStartStopButtonState = 0;
 int testId = -1;
 unsigned int height = 0; //height of force applicator above ground in mm
 int maxLoad; //ADC code corresponding to max load seen in current test
+boolean minTermLoadAttained;
 
 void setup() {
   Serial.begin(115200); //initialise hardware serial port
@@ -78,6 +79,7 @@ void loop() {
         //=================
         //PRE-TEST SEQUENCE
         //=================
+        minTermLoadAttained = false;
         
         //=====================
         //SET OR CONFIRM HEIGHT
@@ -144,42 +146,8 @@ void loop() {
   if (testUnderway == true) {
     loadCellVal = ads1115.readADC_Differential_0_1(); //differential signal between channels 0 and 1
     potVal = ads1115.readADC_Differential_2_3(); //differential signal between channels 2 and 3
-    //========================================
-    //CHECK IF PRE-LOAD ATTAINED AND SEND DATA
-    //========================================
-    if (preloadAttained) { //if preload already attained, just send data
-      sendData();
-    }
-    else if (loadCellVal > zeroLoadCode + 240) { //if preload not previously attained, check if new point attains preload, 240 codes per N from calibration
-      preloadAttained = true; //start sending data once preload attained
-      sendData(); //send first data point
-    }
-
-    //==================================================
-    //UPDATE MAX LOAD AND CHECK FOR TERMINATION CRITERIA
-    //==================================================
-    if (loadCellVal > maxLoad) {
-      maxLoad = loadCellVal; //set current load cell value as new maximum
-    }
-    else if (loadCellVal < (1-dropTerm) * float(maxLoad)) {
-      testUnderway = false; //stop test
-      preloadAttained = false; //reset preload attainment toggle
-      maxLoad = 0; //reset maxLoad variable
-      digitalWrite(testStatusLedPin, LOW); //turn off test status LED
-      Serial.println("END"); //keyword to end test
-      Serial.print("TESTID=");  //testID on new line
-      Serial.println(testId); //unique test identifier
-
-      //==================================
-      // PROMPT USER TO ACCEPT/REJECT DATA
-      //==================================
-      if (promptAcceptReject(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin) == true) {
-        acceptData();
-      }
-      else {
-        rejectData();
-      }
-    }
+   
+    sendData();
   }
  
  
@@ -259,7 +227,7 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
     delay(2);
     finalTestIdString[i] = Serial.read();
   }
-  finalTestIdString[4] = 0x00;
+  finalTestIdString[4] = 0x00;p
   finalTestId = atoi(finalTestIdString);
   
   //=====================================================
