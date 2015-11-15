@@ -159,7 +159,7 @@ void loop() {
  //Serial.print(" ,buttonState=");
  //Serial.println(testStartStopButtonState);
  
-  delay(50); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
+  delay(5); //***TO-DO: Eliminate this and figure out a more elegant way to control sampling rate
 }
 
 
@@ -227,7 +227,7 @@ boolean promptAcceptReject(int pushbuttonPin, int acceptLedPin, int rejectLedPin
     delay(2);
     finalTestIdString[i] = Serial.read();
   }
-  finalTestIdString[4] = 0x00;p
+  finalTestIdString[4] = 0x00;
   finalTestId = atoi(finalTestIdString);
   
   //=====================================================
