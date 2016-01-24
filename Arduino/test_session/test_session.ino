@@ -86,8 +86,11 @@ void loop() {
         //=====================
         if (height ==  0) { //check if test height is set
           setHeight(encoderButtonPin); //call function to set height
+          confirmHeight(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin); //prompt user to confirm currently set height value
+
         }
-        confirmHeight(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin); //prompt user to confirm currently set height value
+        //***pre-India modification: do not confirm height at every test, require Arduino reset to change height
+        //confirmHeight(encoderButtonPin, encoderGreenLedPin, encoderRedLedPin); //prompt user to confirm currently set height value
 
         //==============
         //ZERO LOAD CELL
