@@ -94,7 +94,7 @@ void loop() {
         //==============
         long int loadCodeSum = 0; //sum of read ADC codes for load cell
         long int potCodeSum = 0; // sum of  read ADC codes for rotary pot
-        for (int i = 0; i < 100; i++) { //read 100 values with 10 ms delay in between reads
+        for (int i = 0; i < 10; i++) { //read 100 values with 10 ms delay in between reads
           loadCodeSum = loadCodeSum + ads1115.readADC_Differential_0_1(); //read ADC code for zero load
           potCodeSum = potCodeSum + ads1115.readADC_Differential_2_3(); //read ADC code for zero rotation
           delay(10);
